@@ -96,7 +96,11 @@ target_include_directories(DtBlkFx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DtBlkFx PRIVATE dtblkfx_engine fftw3f sdk)
 
 file(GLOB DTBLKFX_RESOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/*")
-smtg_target_add_plugin_resources(DtBlkFx RESOURCES ${DTBLKFX_RESOURCES})
+smtg_target_add_plugin_resources(DtBlkFx
+    RESOURCES
+        ${DTBLKFX_RESOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/vst3/DtBlkFx.icns
+)
 smtg_target_set_bundle(DtBlkFx
     BUNDLE_IDENTIFIER "org.darrelltam.dtblkfx.vst3"
     COMPANY_NAME "Darrell Tam"

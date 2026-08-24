@@ -10,6 +10,8 @@
     <string>DtBlkFx</string>
     <key>CFBundleIdentifier</key>
     <string>org.darrelltam.dtblkfx.vst3</string>
+    <key>CFBundleIconFile</key>
+    <string>DtBlkFx.icns</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
