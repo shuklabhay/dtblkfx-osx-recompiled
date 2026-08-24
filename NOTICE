@@ -1,0 +1,9 @@
+DtBlkFx was created by Darrell Tam and is copyright (c) 2005-2006 Darrell Tam.
+
+This repository is a continuation of the source published by Dan Smith at
+https://github.com/dozius/DtBlkFx. Its Git history is retained for provenance.
+
+DtBlkFx source files state GNU GPL version 2 or any later version. This
+repository retains the upstream GNU GPL version 3 license in LICENSE. Modified
+versions and binaries distributed from this repository must comply with that
+license. Third-party components retain their respective licenses and notices.
