@@ -49,7 +49,7 @@ TODO:
 #define LOG_FILE_NAME "c:\\fx1_0.html"
 #include "Debug.h"
 
-#include "SinCosTable.h"
+#include "sincostable.h"
 
 #include "DtBlkFx.hpp"
 #include "FxRun1_0.h"
@@ -63,7 +63,7 @@ enum {
   AUDIO_CHANNELS = BlkFxParam::AUDIO_CHANNELS
 };
 
-long g_rand_i = 1;
+std::int32_t g_rand_i = 1;
 
 
 
@@ -1449,7 +1449,7 @@ public:
 
   void run(long b0, long b1)
   {
-    _shift.run</*CONJ*/0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0 + _frq_shift);
+    _shift.run<0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0 + _frq_shift);
   }
 
   void done()
@@ -1542,9 +1542,9 @@ public:
   void run(long b0, long b1)
   {
     if(_conjugate_mode)
-      _shift.run</*CONJ*/1>(/*src first*/b0, /*src last*/b1, /*dst*/(b0+b1-(b1-b0+1)*_frq_mult)/2, /*dst scale*/_frq_mult);
+      _shift.run<1>(/*src first*/b0, /*src last*/b1, /*dst*/(b0+b1-(b1-b0+1)*_frq_mult)/2, /*dst scale*/_frq_mult);
     else
-      _shift.run</*CONJ*/0>(/*src first*/b0, /*src last*/b1, /*dst*/(b0+b1-(b1-b0+1)*_frq_mult)/2, /*dst scale*/_frq_mult);
+      _shift.run<0>(/*src first*/b0, /*src last*/b1, /*dst*/(b0+b1-(b1-b0+1)*_frq_mult)/2, /*dst scale*/_frq_mult);
   }
 
   void done()
@@ -1886,7 +1886,7 @@ public:
   {
     // determine offset to apply to bins
     FixPoint<12> bin_shift = _parent->_curr_cent * _shift_mult;
-    _shift.run</*CONJ*/0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0+bin_shift);
+    _shift.template run<0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0+bin_shift);
   }
 
   void done()
@@ -2041,7 +2041,7 @@ public:
 
   void run(long b0, long b1)
   {
-    _shift.run</*CONJ*/0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0*_frq_mult, /*dst scale*/_frq_mult);
+    _shift.run<0>(/*src first*/b0, /*src last*/b1, /*dst first*/b0*_frq_mult, /*dst scale*/_frq_mult);
   }
 
   void done()

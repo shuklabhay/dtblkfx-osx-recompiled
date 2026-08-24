@@ -30,11 +30,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 #include <stdio.h>
 #include <string.h>
 
-#include "WrapProcessFloatVec.h"
+#include "wrapprocessfloatvec.h"
 
 #include "rfftw_float.h"
 #include "DtBlkFx.hpp"
+#ifndef DTBLKFX_HEADLESS
 #include "Gui.h"
+#endif
 
 
 // filled by BlkFxMain.cpp
@@ -107,9 +109,15 @@ enum {
 extern bool GlobalInitOk();
 
 //-------------------------------------------------------------------------------------------------
-DtBlkFx::DtBlkFx (audioMasterCallback audioMaster) :
-  AudioEffectX (
+DtBlkFx::DtBlkFx (
+#ifndef DTBLKFX_HEADLESS
+  audioMasterCallback audioMaster
+#endif
+) :
+  DtBlkFxBase (
+#ifndef DTBLKFX_HEADLESS
     audioMaster,
+#endif
     /*kNumPrograms*/g_blk_fx_presets.size()+1,
     /*kNumParams*/BlkFxParam::TOTAL_NUM
   )
@@ -124,7 +132,9 @@ DtBlkFx::DtBlkFx (audioMasterCallback audioMaster) :
   _params.init(/*n params*/BlkFxParam::TOTAL_NUM, /*delay length*/140);
 
   // set GUI if we've loaded images ok
-  if(GlobalInitOk()) setEditor(new Gui(this));
+  #ifndef DTBLKFX_HEADLESS
+    if(GlobalInitOk()) setEditor(new Gui(this));
+  #endif
 
   //
   for(i = 0; i < _fx1_0.size(); i++) _fx1_0[i].init(this, /*fx set*/i);
@@ -183,9 +193,11 @@ DtBlkFx::DtBlkFx (audioMasterCallback audioMaster) :
 //-------------------------------------------------------------------------------------------------
 DtBlkFx::~DtBlkFx ()
 {
+#ifndef DTBLKFX_HEADLESS
   // make sure gui is closed, probably don't need to
   // TODO: check whether we need to do this
   if(gui()) gui()->close();
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -356,11 +368,11 @@ VstInt32 /*1=success*/ DtBlkFx::setChunk (void* vdata, VstInt32 n_bytes, bool is
 {
   LittleEndianMemStr le_data(vdata, n_bytes);
 
-  unsigned long tag;
+  std::uint32_t tag;
   if(!le_data.get32(&tag)) return 0;
   if(tag != CHUNK_TAG) return 0;
 
-  unsigned long vers;
+  std::uint32_t vers;
   if(!le_data.get32(&vers)) return 0;
 
   if(vers == 0) {
@@ -378,10 +390,10 @@ VstInt32 /*1=success*/ DtBlkFx::setChunk (void* vdata, VstInt32 n_bytes, bool is
 
   // these versions are nearly the same
   if(vers == 100 || vers == 101) {
-    long num_programs;
+    std::int32_t num_programs;
     if(!le_data.get32(&num_programs)) return 0;
 
-    long curr_program;
+    std::int32_t curr_program;
     if(vers==101)
       if(!le_data.get32(&curr_program)) return 0;
 
@@ -405,13 +417,13 @@ VstInt32 /*1=success*/ DtBlkFx::setChunk (void* vdata, VstInt32 n_bytes, bool is
       if(!curr.loadLittleEndian(&le_data, num_params)) return 0;
 
       // max number of programs that we can load
-      long max_num_programs = AudioEffect::numPrograms-1;
+      std::int32_t max_num_programs = DtBlkFxBase::numPrograms-1;
 
       // calculate the number of programs based on the number of bytes
-      num_programs = min((long)le_data.n/PackedBytesPerVstProgram(num_programs), num_programs);
+      num_programs = std::min<std::int32_t>(le_data.n/PackedBytesPerVstProgram(num_programs), num_programs);
 
       // don't load more than what we have space for
-      num_programs = min(max_num_programs, num_programs);
+      num_programs = std::min(max_num_programs, num_programs);
 
       // load all the programs
       for(i = 0; i < num_programs; i++) _program[i].loadLittleEndian(&le_data, num_params);
@@ -421,11 +433,11 @@ VstInt32 /*1=success*/ DtBlkFx::setChunk (void* vdata, VstInt32 n_bytes, bool is
         _program[i-1].setName("unnamed");
 
       // determine current program
-      if(vers == 101) AudioEffect::curProgram = curr_program;
+      if(vers == 101) DtBlkFxBase::curProgram = curr_program;
       else
         // current program number is stored as the name of the "curr" params
         // I did it like this because I forgot to add a specific field for this in a prerelease
-        AudioEffect::curProgram = strtol(curr.getName(), /*end ptr*/NULL, /*base*/10);
+        DtBlkFxBase::curProgram = strtol(curr.getName(), /*end ptr*/NULL, /*base*/10);
 
       curProgram = currProgramNum(); // limit range
       LOG("", "DtBlkFx::setChunk v1.0" << VAR(curProgram));
@@ -451,7 +463,7 @@ void DtBlkFx::setProgram (VstInt32 num)
 
   // normal case
   if(num < (int)_program.size()-1)
-    AudioEffect::setProgram(num);
+    DtBlkFxBase::setProgram(num);
   else {
     // check for the special "reset current program"
     // reset current program to defaults
@@ -480,10 +492,12 @@ void DtBlkFx::resume ()
 // called by vst-host to get ready to start processing
 {
   LOG("", "DtBlkFx::resume");
-  AudioEffectX::resume ();
+  DtBlkFxBase::resume ();
 
   ScopeCriticalSection scs(_protect);
-  if(gui()) gui()->resume();
+  #ifndef DTBLKFX_HEADLESS
+    if(gui()) gui()->resume();
+  #endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -492,7 +506,7 @@ void DtBlkFx::suspend ()
 // called by vst-host when sound is stopping
 {
   LOG("", "DtBlkFx::suspend");
-  AudioEffectX::suspend();
+  DtBlkFxBase::suspend();
 
   ScopeCriticalSection scs(_protect);
 
@@ -502,7 +516,9 @@ void DtBlkFx::suspend ()
   // clear buffers
   init();
 
-  if(gui()) gui()->suspend();
+  #ifndef DTBLKFX_HEADLESS
+    if(gui()) gui()->suspend();
+  #endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -510,7 +526,7 @@ void DtBlkFx::setBlockSize(VstInt32 sz)
 // virtual, override AudioEffect
 // called by vst-host to indicate max number of samples that will be passed to process
 {
-  AudioEffectX::setBlockSize(sz);
+  DtBlkFxBase::setBlockSize(sz);
   _max_delay_n = _x3_sz-MAX_FFT_SZ-sz;
 }
 
@@ -660,7 +676,9 @@ void DtBlkFx::setParameter (VstInt32 index, float value)
     if(_params_state != PARAMS_INTERP_OK) _params_need_processing = true;
   }
 
-  if (gui()) gui()->setParameter(index, value);
+  #ifndef DTBLKFX_HEADLESS
+    if (gui()) gui()->setParameter(index, value);
+  #endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1576,11 +1594,15 @@ inline void DtBlkFx::_process(float** in_buf, long buf_n)
     else {
       // normal case, we need to do the FFTs
       doFFT();
-      if(gui()) gui()->FFTDataRdy(0/*input*/);
+      #ifndef DTBLKFX_HEADLESS
+        if(gui()) gui()->FFTDataRdy(0/*input*/);
+      #endif
       prepMixOut();
 
       procFFT();
-      if(gui()) gui()->FFTDataRdy(1/*output*/);
+      #ifndef DTBLKFX_HEADLESS
+        if(gui()) gui()->FFTDataRdy(1/*output*/);
+      #endif
       ifftAndMixOut();
     }
     nextBlk();

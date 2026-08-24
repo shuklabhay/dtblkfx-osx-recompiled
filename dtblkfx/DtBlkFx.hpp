@@ -19,7 +19,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 
 ***************************************************************************************************/
 
+#ifdef DTBLKFX_HEADLESS
+#include "legacy_host.hpp"
+using DtBlkFxBase = LegacyPluginBase;
+#else
 #include <vstsdk/public.sdk/source/vst2.x/audioeffectx.h>
+using DtBlkFxBase = AudioEffectX;
+#endif
 #include <vector>
 
 #include "misc_stuff.h"
@@ -32,7 +38,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 class Gui;
 
 //------------------------------------------------------------------------
-class DtBlkFx : public AudioEffectX
+class DtBlkFx : public DtBlkFxBase
 {
 public:
 	enum {
@@ -40,7 +46,11 @@ public:
 		AUDIO_CHANNELS = BlkFxParam::AUDIO_CHANNELS
 	};
 
+	#ifdef DTBLKFX_HEADLESS
+	DtBlkFx ();
+	#else
 	DtBlkFx (audioMasterCallback audioMaster);
+	#endif
 	~DtBlkFx ();
 
 public: // override AudioEffect methods
@@ -75,7 +85,11 @@ public: // override AudioEffect methods
 public: // our own methods
 
 	// cast the editor to our gui
+	#ifdef DTBLKFX_HEADLESS
+	Gui* gui() { return NULL; }
+	#else
 	Gui* gui() { return (Gui*)/*AudioEffect::*/editor; }
+	#endif
 
 	// get a global param for display
 	bool getParamDisplayGlobal(BlkFxParam::SplitParamNum& p, float v, CharRng text);

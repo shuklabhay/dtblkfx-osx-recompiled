@@ -16,6 +16,8 @@ Free software!
 #include <stdarg.h>
 #include <math.h>
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
 
 #ifdef _DEBUG
 #include <iostream>
@@ -24,13 +26,10 @@ Free software!
 #ifdef _WIN32
   #include <windows.h>
   #include <xmmintrin.h>
-#else // assume MAC
-  #include <libkern/OSAtomic.h>
-  #include <Accelerate/Accelerate.h>
-  #ifdef __ppc__
-    
-  #else
-    #include "/usr/include/gcc/darwin/3.3/xmmintrin.h" // not sure why this isn't in 4.0
+#else
+  #include <mutex>
+  #if defined(__SSE__)
+    #include <xmmintrin.h>
   #endif
 #endif
 
@@ -84,7 +83,7 @@ Free software!
   #define ASSERTX(e, msg) { }
 #endif
 
-typedef unsigned long uint32;
+typedef std::uint32_t uint32;
 
 //------------------------------------------------------------------------------------------
 inline int RndToInt(float v) { return (int)floorf(v+0.5f); }
@@ -159,11 +158,10 @@ template <class T> struct BuiltinWrapper
     return t?true:false;
   }
 
-#else //assume MAC OS X
+#else
 
-  // wrap the MAC functions to look like windows
-  inline long InterlockedIncrement(long* v) { return (long)OSAtomicIncrement32Barrier((int32_t*)v); }
-  inline long InterlockedDecrement(long* v) { return (long)OSAtomicDecrement32Barrier((int32_t*)v); }
+  inline long InterlockedIncrement(long* v) { return __atomic_add_fetch(v, 1L, __ATOMIC_SEQ_CST); }
+  inline long InterlockedDecrement(long* v) { return __atomic_sub_fetch(v, 1L, __ATOMIC_SEQ_CST); }
 
   inline int strnlen(const char* src, int max_n)
   {
@@ -175,26 +173,24 @@ template <class T> struct BuiltinWrapper
 
   //------------------------------------------------------------------------------------------
   struct CriticalSectionWrapper
-  // wrap a spinlock
   {
-    OSSpinLock sl;
-    CriticalSectionWrapper() { sl = 0; }
-    void lock() { OSSpinLockLock(&sl); }
-    void unlock() { OSSpinLockUnlock(&sl); }
-    operator OSSpinLock* () { return &sl; }
+    std::mutex mutex;
+    void lock() { mutex.lock(); }
+    void unlock() { mutex.unlock(); }
+    operator std::mutex* () { return &mutex; }
   };
 
   //------------------------------------------------------------------------------------------
   class ScopeCriticalSection
   {
   public:
-    OSSpinLock* sl;
-    ScopeCriticalSection(OSSpinLock* sl_)
+    std::mutex* mutex;
+    ScopeCriticalSection(std::mutex* mutex_)
     {
-      sl = sl_;
-      OSSpinLockLock(sl_);
+      mutex = mutex_;
+      mutex->lock();
     }
-    ~ScopeCriticalSection() { OSSpinLockUnlock(sl); }
+    ~ScopeCriticalSection() { mutex->unlock(); }
   };
 
 #endif
@@ -202,9 +198,8 @@ template <class T> struct BuiltinWrapper
 
 
 //------------------------------------------------------------------------------------------
-#ifdef __ppc__
+#if !defined(__SSE__)
 
-  // leave these alone on PPC, by default denormals are off
   #define SCOPE_NO_FP_EXCEPTIONS_OR_DENORMALS
   
 #else // assume intel SSE
@@ -381,10 +376,11 @@ template <class I, class X> inline I wrap(I i, const X& x)
 }
 
 //------------------------------------------------------------------------------------------
-inline long prbs32(long x)
+inline std::int32_t prbs32(std::int32_t x)
 {
   // maximal length, taps 32 31 29 1, from wikipedia
-  return ((unsigned long)x >> 1) ^ (-(x & 1) & 0xd0000001UL); 
+  const std::uint32_t value = static_cast<std::uint32_t>(x);
+  return static_cast<std::int32_t>((value >> 1) ^ (-(value & 1U) & 0xd0000001U));
 }
 
 //------------------------------------------------------------------------------------------
@@ -393,7 +389,7 @@ template <class T> T* begin(const std::vector<T>& v) { return &(const_cast<std::
 template <class T> T* begin(const std::valarray<T>& v) { return &(const_cast<std::valarray<T>&>(v)[0]); }
 
 //------------------------------------------------------------------------------------------
-template <class T, class BASE=T> struct new_auto_ptr : public std::auto_ptr<BASE>
+template <class T, class BASE=T> struct new_auto_ptr : public std::unique_ptr<BASE>
 // wrapper for auto_ptr that is initialized with a new instance of "T"
 // i.e. instead of writing this:
 //     auto_ptr<MyClass> my_class = new MyClass;
@@ -401,12 +397,12 @@ template <class T, class BASE=T> struct new_auto_ptr : public std::auto_ptr<BASE
 //     new_auto_ptr<MyClass> my_class;
 
 {
-  new_auto_ptr() : std::auto_ptr<BASE>(new T) { }
+  new_auto_ptr() : std::unique_ptr<BASE>(new T) { }
 };
 
 //------------------------------------------------------------------------------------------
 // allow an auto_ptr to be set to a ptr
-template<class A, class B> inline void set(std::auto_ptr<A>& a, B* b) { a = std::auto_ptr<A>(b); }
+template<class A, class B> inline void set(std::unique_ptr<A>& a, B* b) { a = std::unique_ptr<A>(b); }
 
 //------------------------------------------------------------------------------------------
 template<class T> struct _PtrBase
@@ -507,8 +503,8 @@ public:
   Rng(T* ptr_, int offs_start, int offs_last/*inclusive*/) { base::ptr = ptr_+offs_start; n = offs_last-offs_start+1; }
   Rng(T* first, T* last/*inclusive*/) { base::ptr = first; n = last-first+1; }
   
-  // attempt to construct using toRng() conversion (for some reason we need to explicitly call conversion)
-  template <class T2> Rng(T2& src) { *this = toRng(src).operator Rng<T> (); }
+  Rng(std::vector<T>& src) { base::ptr = src.empty() ? NULL : &src[0]; n = static_cast<int>(src.size()); }
+  Rng(std::valarray<T>& src) { base::ptr = src.size() == 0 ? NULL : &src[0]; n = static_cast<int>(src.size()); }
 
   void adjStart(int i) { n -= i; base::ptr += i; }
   void adjLen(int i) { n += i; }
@@ -527,7 +523,7 @@ public:
   const T& get(int i) const { return base::ptr[limit_range(i, 0, n-1)]; }
 
   // get that returns "out_of_bounds" if "i" out of bounds
-  const T& get(int i, const T& out_of_bounds) const { return idx_within(i, *this) ? data[i] : out_of_bounds; }
+  const T& get(int i, const T& out_of_bounds) const { return idx_within(i, *this) ? base::ptr[i] : out_of_bounds; }
 
   // cast to compatible types
   template <class T2> operator Rng<T2> () const { return Rng<T2>(base::ptr, n); }
@@ -659,7 +655,7 @@ inline void MaybeSwap32(void* /*4-byte*/ dst, void* /*4-byte*/ src)
     dstc[3] = srcc[0];
   #else
     // little-endian (assume non word aligned is ok)
-    *(unsigned long*)dst = *(unsigned long*)src;
+    std::memcpy(dst, src, sizeof(std::uint32_t));
   #endif
 }
 
@@ -673,7 +669,7 @@ inline void MaybeSwap16(void* /*2-byte*/ dst, void* /*2-byte*/ src)
     dstc[0] = srcc[1];
     dstc[1] = srcc[0];
   #else
-    *(unsigned short*)dst = *(unsigned short*)src;
+    std::memcpy(dst, src, sizeof(std::uint16_t));
   #endif
 }
 
@@ -693,7 +689,7 @@ struct LittleEndianMemStr : public UCharRng
     // NOTE: if there's a compile error here then "dst" does not point to a 4 byte quantity
     typedef char chk_type[sizeof(T)==4 ? 1 : -1];
 
-    unsigned long v;
+    std::uint32_t v;
     MaybeSwap32(&v, &src);
     return ShiftDst(/*dst*/this, /*src*/&v);
   }
@@ -703,7 +699,7 @@ struct LittleEndianMemStr : public UCharRng
     // NOTE: if there's a compile error here then "dst" does not point to a 4 byte quantity
     typedef char chk_type[sizeof(T)==4 ? 1 : -1];
     
-    unsigned long v;
+    std::uint32_t v;
     if(!ShiftSrc(/*dst*/&v, /*src*/this)) return false;
     MaybeSwap32(dst, &v);
     return true;
@@ -733,7 +729,7 @@ struct LittleEndianMemStr : public UCharRng
 };
 
 //-------------------------------------------------------------------------------------------------
-inline Rng<char> v_rng_sprf(Rng<char> dst, const char* fmt, const va_list args)
+inline Rng<char> v_rng_sprf(Rng<char> dst, const char* fmt, va_list args)
 //
 // wrapper for vsnprintf to print into a range & return remaining
 //
@@ -751,7 +747,7 @@ inline Rng<char> v_rng_sprf(Rng<char> dst, const char* fmt, const va_list args)
       dst[n] = 0;
     }
   #else
-    int n = vsnprintf(dst, dst.n, fmt, const_cast<va_list>(args));
+    int n = vsnprintf(dst, dst.n, fmt, args);
 
     // check for truncation
     if(n > dst.n-1) n = dst.n-1;
@@ -919,7 +915,7 @@ public:
     }
 
     // zero terminate
-    base::data[min(i, LENGTH-1)] = 0;
+    base::data[std::min(i, LENGTH-1)] = 0;
   }
   
   // legnth of string
@@ -1279,7 +1275,7 @@ struct CharRng : public Rng<char>
   CharRng(std::vector<char>& src) : Rng<char>(src) {}
   CharRng(std::valarray<char>& src) : Rng<char>(src) {}
   CharRng(char* src, int len) : Rng<char>(src, len) {}
-  template <int N> CharRng(Array<char, N>& src) : Rng<char>(src) {}
+  template <int N> CharRng(Array<char, N>& src) : Rng<char>(src.data, N) {}
 };
 
 //
@@ -1385,4 +1381,3 @@ inline PercentStruct spr_percent(float /*0..1*/ frac, int decimal_places=0)
 CharRng operator << (CharRng dst, PercentStruct s);
 
 #endif
-

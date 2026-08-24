@@ -4,3 +4,6 @@
 [submodule "zlib"]
 	path = zlib
 	url = https://github.com/madler/zlib.git
+[submodule "third_party/vst3sdk"]
+	path = third_party/vst3sdk
+	url = https://github.com/steinbergmedia/vst3sdk.git

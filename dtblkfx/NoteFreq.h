@@ -32,7 +32,7 @@ namespace NoteFreq
 };
 
 // given a note as a string, convert to hz
-float/*freq hz*/NoteToHz(string txt);
+float/*freq hz*/NoteToHz(std::string txt);
 
 // return frequency of a note, where note is specified as the number of semitones away from "c0"
 // where note_offs_c0 means c0 is 0, ..., c1 is 12, c#1 is 13, d1 is 14, ...

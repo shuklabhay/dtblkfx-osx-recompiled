@@ -21,6 +21,8 @@ when moving functions outside because they would all need to be templated
 #include <vector>
 #include "misc_stuff.h"
 
+inline int toVstParamIdx(int i) { return i; }
+
 //-------------------------------------------------------------------------------------------------
 struct VstParamIdx : public BuiltinWrapper<int>
 // wrapper for vst param indexes (int) so that MorphParam can be used as an index directly
@@ -28,9 +30,6 @@ struct VstParamIdx : public BuiltinWrapper<int>
 	VstParamIdx() {}
 	template <class T> VstParamIdx(const T& t) { val = toVstParamIdx(t); }
 };
-
-// usual thing that VstParamIdx's are constructed from
-inline int toVstParamIdx(int i) { return i; }
 
 //-------------------------------------------------------------------------------------------------
 class ParamsDelay
@@ -117,7 +116,7 @@ public:
 		_data.resize(_record_len_bytes*_length);
 
 		// clr first record
-		memset(&begin(_data), 0, _record_len_bytes);
+		memset(_data.data(), 0, _record_len_bytes);
 
 		// by default no values are forced
 		_override_param.resize(n_params, 0.0f);

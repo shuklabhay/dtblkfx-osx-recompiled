@@ -64,7 +64,7 @@ Rng<char> NoteToTxt(Rng<char> out_txt, float offs_c0)
 }
 
 //------------------------------------------------------------------------------------------
-float/*freq hz*/NoteToHz(string note)
+float/*freq hz*/NoteToHz(std::string note)
 { 
 	float cents = 0.0f;
 	int colon_pos = note.find(":");

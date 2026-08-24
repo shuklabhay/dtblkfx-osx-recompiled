@@ -7,3 +7,10 @@ DtBlkFx source files state GNU GPL version 2 or any later version. This
 repository retains the upstream GNU GPL version 3 license in LICENSE. Modified
 versions and binaries distributed from this repository must comply with that
 license. Third-party components retain their respective licenses and notices.
+
+The VST 3 SDK is copyright Steinberg Media Technologies GmbH and is used under
+the MIT License included in third_party/vst3sdk/LICENSE.txt.
+
+FFTW 3.3.10 is copyright Matteo Frigo and the Massachusetts Institute of
+Technology and is used under GNU GPL version 2 or any later version. Its
+official source archive is fetched by CMake with a pinned SHA-256 digest.
