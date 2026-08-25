@@ -73,7 +73,8 @@ int main(int argc, const char* argv[])
 
         auto controller = provider->getControllerPtr();
         if(!Check(controller != nullptr, "edit controller not found") ||
-           !Check(controller->getParameterCount() == 45, "expected 44 legacy parameters plus bypass"))
+           !Check(controller->getParameterCount() == 45, "expected 44 legacy parameters plus bypass") ||
+           !Check(controller->getParamNormalized(1) == 0.0, "fresh instances must default Delay to zero"))
             return 1;
 
         auto view = Steinberg::owned(controller->createView(Steinberg::Vst::ViewType::kEditor));
@@ -158,8 +159,13 @@ int main(int argc, const char* argv[])
                data.outputs = &outputBus;
 
                std::uint32_t noise = 0x12345678;
+               struct AudioResult
+               {
+                   double energy {};
+                   std::int64_t firstOutput {-1};
+               };
                const auto processAudio = [&] {
-                   double outputEnergy = 0.0;
+                   AudioResult result;
                    for(int block = 0; block < 128; ++block)
                    {
                        for(Steinberg::int32 sample = 0; sample < setup.maxSamplesPerBlock; ++sample)
@@ -170,15 +176,23 @@ int main(int argc, const char* argv[])
                            inputRight[sample] = value * 0.7f;
                        }
                        if(processor->process(data) != Steinberg::kResultOk)
-                           return -1.0;
-                       for(float sample : outputLeft)
-                           outputEnergy += std::abs(sample);
+                       {
+                           result.energy = -1.0;
+                           return result;
+                       }
+                       for(Steinberg::int32 sample = 0; sample < setup.maxSamplesPerBlock; ++sample)
+                       {
+                           result.energy += std::abs(outputLeft[sample]);
+                           if(result.firstOutput < 0 &&
+                              (outputLeft[sample] != 0.0f || outputRight[sample] != 0.0f))
+                               result.firstOutput = static_cast<std::int64_t>(block) * setup.maxSamplesPerBlock + sample;
+                       }
                    }
-                   return outputEnergy;
+                   return result;
                };
 
-               const double firstEnergy = processAudio();
-               if(firstEnergy <= 1.0)
+               const AudioResult firstAudio = processAudio();
+               if(firstAudio.energy <= 1.0 || firstAudio.firstOutput != 101)
                    return false;
                [[NSRunLoop currentRunLoop]
                    runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
@@ -187,8 +201,8 @@ int main(int argc, const char* argv[])
                   processor->setProcessing(false) != Steinberg::kResultOk ||
                   processor->setProcessing(true) != Steinberg::kResultOk)
                    return false;
-               const double secondEnergy = processAudio();
-               if(secondEnergy <= 1.0)
+               const AudioResult secondAudio = processAudio();
+               if(secondAudio.energy <= 1.0 || secondAudio.firstOutput != 101)
                    return false;
                [[NSRunLoop currentRunLoop]
                    runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];

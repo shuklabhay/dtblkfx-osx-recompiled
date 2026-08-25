@@ -35,8 +35,6 @@ void ParameterName(Steinberg::Vst::ParamID id, char* output, std::size_t outputS
 
 double DefaultValue(Steinberg::Vst::ParamID id)
 {
-    if(id == BlkFxParam::DELAY)
-        return 16.0 / 255.0;
     if(id == BlkFxParam::FFT_LEN)
         return BlkFxParam::getFFTLenParam(16);
     if(id == BlkFxParam::OVERLAP)

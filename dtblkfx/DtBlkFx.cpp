@@ -157,7 +157,7 @@ DtBlkFx::DtBlkFx (
   // copy presets into the program
   _program.reserve(/*AudioEffect::*/numPrograms);
   _program = g_blk_fx_presets;
-  _program.push_back(BlkFxProgram("> reset current <:0.0 0.062745098 0.1098039 0.35"));
+  _program.push_back(BlkFxProgram("> reset current <:0.0 0.0 0.1098039 0.35"));
 
   //
   setNumInputs (AUDIO_CHANNELS);
@@ -183,7 +183,7 @@ DtBlkFx::DtBlkFx (
   init();
 
   // put in arbitrary initial params - they should be overwritten by first param update
-  _params.put(/*samp abs*/0, BlkFxParam::DELAY, 16.0f/255.0f);
+  _params.put(/*samp abs*/0, BlkFxParam::DELAY, 0.0f);
   _params.put(/*samp abs*/0, BlkFxParam::FFT_LEN, BlkFxParam::getFFTLenParam(16));
   _params.put(/*samp abs*/0, BlkFxParam::OVERLAP, 0.35f);
 
