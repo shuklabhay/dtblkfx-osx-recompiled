@@ -1,8 +1,8 @@
-[submodule "libpng"]
-	path = libpng
+[submodule "third_party/libpng"]
+	path = third_party/libpng
 	url = https://github.com/glennrp/libpng.git
-[submodule "zlib"]
-	path = zlib
+[submodule "third_party/zlib"]
+	path = third_party/zlib
 	url = https://github.com/madler/zlib.git
 [submodule "third_party/vst3sdk"]
 	path = third_party/vst3sdk

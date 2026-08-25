@@ -7,7 +7,7 @@ the original VST2 SDK.
 Run:
 
 ```sh
-./scripts/build.sh
+./tools/build.sh
 ```
 
 The script initializes only the VST3 SDK submodules used by this plug-in. CMake
@@ -36,7 +36,7 @@ real-time data exchange API. No JUCE or VSTGUI binary dependency is used.
 Run the complete verification loop independently with:
 
 ```sh
-./scripts/test.sh
+./tools/test.sh
 ```
 
 The smoke host loads the module, verifies and selects the historical program
@@ -53,27 +53,27 @@ effect type, multi-effect chains, every stage of a phase-sensitive chain, five
 FFT sizes, five overlaps, four delays, and a large-FFT/long-delay case. Set
 `DTBLKFX_PERF_OUTPUT_DIR` to write interleaved stereo float32 output for sample
 comparison. Generated reports and audio stay under the ignored
-`tmp_dtblk-osx-recompiled` directory.
+`tmp_dtblkfx-osx-recompiled` directory.
 
 ## Preset packs
 
 Generate and validate the standard VST3 and Ableton Live preset archives with:
 
 ```sh
-./scripts/package_presets.sh
+./tools/package_presets.sh
 ```
 
 The generator selects each of the 43 programs in the built VST3, saves it with
 Steinberg's preset API, reloads it through the plug-in, and verifies the full
 parameter state. It then creates deterministic ZIP archives under
-`preset-packs`. No files are copied into user or system preset directories.
+`presets/packages`. No files are copied into user or system preset directories.
 
 ## Audio Unit v2
 
 Build the universal AUv2 wrapper with:
 
 ```sh
-./scripts/build_auv2.sh
+./tools/build_auv2.sh
 ```
 
 The result is `build-au/AU/Release/DtBlkFx.component`. This optional target
@@ -98,7 +98,7 @@ against an independently downloaded historical DLL:
 ```sh
 i686-w64-mingw32-g++ -std=c++17 -O2 -static \
   -static-libgcc -static-libstdc++ tests/legacy_vst2_host.cpp \
-  -o tmp_dtblk-osx-recompiled/legacy_vst2_host-x86.exe
+  -o tmp_dtblkfx-osx-recompiled/legacy_vst2_host-x86.exe
 ```
 
 Wine paths and setup vary, so pass the DLL and output directory in Windows path
@@ -108,7 +108,7 @@ Do not commit downloaded binaries or rendered audio.
 Compare two completed render directories without third-party Python packages:
 
 ```sh
-./scripts/compare_oracles.py path/to/current-renders path/to/reference-renders
+./tools/compare_oracles.py path/to/current-renders path/to/reference-renders
 ```
 
 The known reference artifact hashes and audited results are in

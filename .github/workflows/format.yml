@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           mapfile -d '' files < <(
-            find port vst3 tests -type f \
+            find src/compat src/vst3 tests -type f \
               \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' \
               -o -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.hxx' \
               -o -name '*.m' -o -name '*.mm' \) -print0

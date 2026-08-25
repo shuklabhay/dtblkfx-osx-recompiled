@@ -1,7 +1,7 @@
 // Loads, attaches, renders, edits, and removes the DtBlkFx editor through VST3 host APIs.
 #import <Cocoa/Cocoa.h>
 
-#include "vst3/ids.hpp"
+#include "src/vst3/ids.hpp"
 
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivstcomponent.h"

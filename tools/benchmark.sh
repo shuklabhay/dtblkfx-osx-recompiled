@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 current_bundle="$repo_dir/build/VST3/Release/DtBlkFx.vst3"
-output_dir="$repo_dir/tmp_dtblk-osx-recompiled/benchmark"
+output_dir="$repo_dir/tmp_dtblkfx-osx-recompiled/benchmark"
 reference_bundle="${1:-}"
 
 mkdir -p "$output_dir"

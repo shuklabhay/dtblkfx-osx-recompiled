@@ -8,4 +8,4 @@ git -C "$repo_dir/third_party/vst3sdk" submodule update --init base cmake plugin
 
 cmake -S "$repo_dir" -B "$repo_dir/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build "$repo_dir/build" --target DtBlkFx validator dtblkfx_smoke dtblkfx_perf dtblkfx_presets --parallel
-"$repo_dir/scripts/test.sh"
+"$repo_dir/tools/test.sh"

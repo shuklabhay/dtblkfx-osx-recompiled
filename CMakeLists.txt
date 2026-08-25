@@ -61,20 +61,20 @@ add_subdirectory(third_party/vst3sdk EXCLUDE_FROM_ALL)
 set(public_sdk_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vst3sdk/public.sdk")
 
 set(DTBLKFX_ENGINE_SOURCES
-    dtblkfx/DtBlkFx.cpp
-    dtblkfx/FxRun1_0.cpp
-    dtblkfx/FxState1_0.cpp
-    dtblkfx/NoteFreq.cpp
-    dtblkfx/fft_frac_shift.cpp
-    dtblkfx/fftw_support.cpp
-    dtblkfx/misc_stuff.cpp
-    dtblkfx/rfftw_float.cpp
-    dtblkfx/sweep1_coeff.cpp
-    dtblkfx/sweep2_coeff.cpp
-    dtblkfx/sweep3_coeff.cpp
-    dtblkfx/sweep4_coeff.cpp
-    dtblkfx/sweep5_coeff.cpp
-    port/legacy_runtime.cpp
+    upstream/dtblkfx/DtBlkFx.cpp
+    upstream/dtblkfx/FxRun1_0.cpp
+    upstream/dtblkfx/FxState1_0.cpp
+    upstream/dtblkfx/NoteFreq.cpp
+    upstream/dtblkfx/fft_frac_shift.cpp
+    upstream/dtblkfx/fftw_support.cpp
+    upstream/dtblkfx/misc_stuff.cpp
+    upstream/dtblkfx/rfftw_float.cpp
+    upstream/dtblkfx/sweep1_coeff.cpp
+    upstream/dtblkfx/sweep2_coeff.cpp
+    upstream/dtblkfx/sweep3_coeff.cpp
+    upstream/dtblkfx/sweep4_coeff.cpp
+    upstream/dtblkfx/sweep5_coeff.cpp
+    src/compat/legacy_runtime.cpp
 )
 
 add_library(dtblkfx_engine STATIC ${DTBLKFX_ENGINE_SOURCES})
@@ -82,30 +82,30 @@ target_compile_features(dtblkfx_engine PUBLIC cxx_std_17)
 target_compile_definitions(dtblkfx_engine PUBLIC DTBLKFX_HEADLESS=1 STEREO=1)
 target_include_directories(dtblkfx_engine
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/dtblkfx
-        ${CMAKE_CURRENT_SOURCE_DIR}/port
+        ${CMAKE_CURRENT_SOURCE_DIR}/upstream/dtblkfx
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/compat
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/projects
+        ${CMAKE_CURRENT_SOURCE_DIR}/upstream/projects
         ${fftw_SOURCE_DIR}/api
 )
 target_link_libraries(dtblkfx_engine PRIVATE fftw3f)
 
 set(DTBLKFX_VST3_SOURCES
-    vst3/controller.cpp
-    vst3/controller.hpp
-    vst3/editor.hpp
-    vst3/factory.cpp
-    vst3/ids.hpp
-    vst3/processor.cpp
-    vst3/processor.hpp
-    vst3/state.cpp
-    vst3/state.hpp
-    vst3/spectrum.hpp
-    vst3/version.hpp
+    src/vst3/controller.cpp
+    src/vst3/controller.hpp
+    src/vst3/editor.hpp
+    src/vst3/factory.cpp
+    src/vst3/ids.hpp
+    src/vst3/processor.cpp
+    src/vst3/processor.hpp
+    src/vst3/state.cpp
+    src/vst3/state.hpp
+    src/vst3/spectrum.hpp
+    src/vst3/version.hpp
 )
 
 if(APPLE)
-    list(APPEND DTBLKFX_VST3_SOURCES vst3/editor.mm)
+    list(APPEND DTBLKFX_VST3_SOURCES src/vst3/editor.mm)
 endif()
 
 smtg_add_vst3plugin(DtBlkFx
@@ -117,20 +117,20 @@ target_include_directories(DtBlkFx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DtBlkFx PRIVATE dtblkfx_engine fftw3f sdk)
 if(APPLE)
     target_link_libraries(DtBlkFx PRIVATE "-framework Cocoa")
-    set_source_files_properties(vst3/editor.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    set_source_files_properties(src/vst3/editor.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 
-file(GLOB DTBLKFX_RESOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/*")
+file(GLOB DTBLKFX_RESOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/upstream/resources/*")
 smtg_target_add_plugin_resources(DtBlkFx
     RESOURCES
         ${DTBLKFX_RESOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/vst3/DtBlkFx.icns
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/vst3/DtBlkFx.icns
 )
 smtg_target_set_bundle(DtBlkFx
     BUNDLE_IDENTIFIER "org.darrelltam.dtblkfx.vst3"
     COMPANY_NAME "Darrell Tam"
 )
-configure_file(vst3/Info.plist.in DtBlkFx.Info.plist @ONLY)
+configure_file(src/vst3/Info.plist.in DtBlkFx.Info.plist @ONLY)
 set_target_properties(DtBlkFx PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/DtBlkFx.Info.plist"
 )
@@ -269,7 +269,7 @@ if(APPLE AND DTBLKFX_BUILD_AUV2)
         BUNDLE_EXTENSION component
         OUTPUT_NAME DtBlkFx
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/AU/Release"
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/au/Info.plist.in"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/au/Info.plist.in"
     )
     smtg_target_setup_universal_binary(DtBlkFxAU)
     add_custom_command(TARGET DtBlkFxAU POST_BUILD
@@ -277,7 +277,7 @@ if(APPLE AND DTBLKFX_BUILD_AUV2)
             "$<TARGET_BUNDLE_DIR:DtBlkFx>"
             "$<TARGET_BUNDLE_DIR:DtBlkFxAU>/Contents/Resources/plugin.vst3"
         COMMAND ${CMAKE_COMMAND} -E copy
-            "${CMAKE_CURRENT_SOURCE_DIR}/vst3/DtBlkFx.icns"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/vst3/DtBlkFx.icns"
             "$<TARGET_BUNDLE_DIR:DtBlkFxAU>/Contents/Resources/DtBlkFx.icns"
         COMMAND /usr/bin/codesign --force --sign - --deep "$<TARGET_BUNDLE_DIR:DtBlkFxAU>"
         VERBATIM

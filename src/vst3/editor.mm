@@ -4,9 +4,9 @@
 #include "editor.hpp"
 
 #include "controller.hpp"
-#include "dtblkfx/BlkFxParam.h"
-#include "dtblkfx/FxRun1_0.h"
-#include "dtblkfx/rfftw_float.h"
+#include "upstream/dtblkfx/BlkFxParam.h"
+#include "upstream/dtblkfx/FxRun1_0.h"
+#include "upstream/dtblkfx/rfftw_float.h"
 
 #include <algorithm>
 #include <cmath>
