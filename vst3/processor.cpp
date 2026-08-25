@@ -19,6 +19,8 @@ namespace DtBlkVst3
 {
 namespace
 {
+constexpr std::int64_t MinimumSpectrumSamplesPerLine = 600;
+
 struct ParameterEvent
 {
     Steinberg::int32 offset {};
@@ -49,6 +51,15 @@ Processor::Processor()
 {
     setControllerClass(Steinberg::FUID::fromTUID(ControllerUID));
     processContextRequirements.needTempo().needProjectTimeMusic();
+    spectrumExchange = std::make_unique<Steinberg::Vst::DataExchangeHandler>(
+        this, [](Steinberg::Vst::DataExchangeHandler::Config& config,
+                 const Steinberg::Vst::ProcessSetup&) {
+            config.blockSize = sizeof(SpectrumFrame);
+            config.numBlocks = 32;
+            config.alignment = 32;
+            config.userContextID = SpectrumExchangeContext;
+            return true;
+        });
 }
 
 Processor::~Processor() = default;
@@ -67,6 +78,9 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
     try
     {
         engine = std::make_unique<DtBlkFx>();
+        engine->setSpectrumCallback(this, [](void* context, DtBlkFx&, int stage) {
+            static_cast<Processor*>(context)->captureSpectrum(stage);
+        });
     }
     catch(...)
     {
@@ -76,6 +90,21 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
     addAudioInput(STR16("Stereo Input"), Steinberg::Vst::SpeakerArr::kStereo);
     addAudioOutput(STR16("Stereo Output"), Steinberg::Vst::SpeakerArr::kStereo);
     return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API Processor::connect(Steinberg::Vst::IConnectionPoint* other)
+{
+    const Steinberg::tresult result = AudioEffect::connect(other);
+    if(spectrumExchange)
+        spectrumExchange->onConnect(other, getHostContext());
+    return result;
+}
+
+Steinberg::tresult PLUGIN_API Processor::disconnect(Steinberg::Vst::IConnectionPoint* other)
+{
+    if(spectrumExchange)
+        spectrumExchange->onDisconnect(other);
+    return AudioEffect::disconnect(other);
 }
 
 Steinberg::tresult PLUGIN_API Processor::setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs,
@@ -114,9 +143,19 @@ Steinberg::tresult PLUGIN_API Processor::setActive(Steinberg::TBool state)
     if(!engine)
         return Steinberg::kResultFalse;
     if(state)
+    {
         engine->resume();
+        resetSpectrumLine();
+        previousSpectrumSamplePosition = 0;
+        if(spectrumExchange)
+            spectrumExchange->onActivate(processSetup);
+    }
     else
+    {
+        if(spectrumExchange)
+            spectrumExchange->onDeactivate();
         engine->suspend();
+    }
     return AudioEffect::setActive(state);
 }
 
@@ -125,10 +164,18 @@ Steinberg::tresult PLUGIN_API Processor::setProcessing(Steinberg::TBool state)
     if(!engine)
         return Steinberg::kResultFalse;
     if(state)
+    {
         engine->resume();
+        resetSpectrumLine();
+        previousSpectrumSamplePosition = 0;
+    }
     else
+    {
         engine->suspend();
-    return AudioEffect::setProcessing(state);
+        spectrumLineEmpty = true;
+        previousSpectrumSamplePosition = 0;
+    }
+    return Steinberg::kResultOk;
 }
 
 void Processor::updateTiming(const Steinberg::Vst::ProcessContext* context, Steinberg::int32 sampleOffset)
@@ -172,6 +219,75 @@ void Processor::processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int
     }
 
     engine->processReplacing(inputs.data(), outputs.data(), sampleCount);
+}
+
+void Processor::resetSpectrumLine()
+{
+    spectrumFrame.inputPower.fill(0.0f);
+    spectrumFrame.outputPower.fill(0.0f);
+    spectrumLineEmpty = false;
+}
+
+void Processor::captureSpectrum(int stage)
+{
+    if(!engine || stage < 0 || stage > 1 || engine->_plan < 0 || engine->_plan >= NUM_FFT_SZ ||
+       engine->getSampleRate() <= 0.0f)
+        return;
+    if(stage == 0 && spectrumLineEmpty)
+        resetSpectrumLine();
+
+    auto& destination = stage == 0 ? spectrumFrame.inputPower : spectrumFrame.outputPower;
+    const int fftLength = g_fft_sz[engine->_plan];
+    const int maximumBin = fftLength / 2;
+    const float halfPixel = std::pow(2.0f, -0.5f * BlkFxParam::octaveSpan() /
+                                              static_cast<float>(SpectrumPixelCount));
+    const float hzToBin = halfPixel * static_cast<float>(fftLength) / engine->getSampleRate();
+    int startBin = 0;
+    for(std::size_t pixel = 0; pixel < SpectrumPixelCount; ++pixel)
+    {
+        int endBin = maximumBin + 1;
+        if(pixel + 1 < SpectrumPixelCount)
+        {
+            const float parameter = static_cast<float>(pixel + 1) /
+                                    static_cast<float>(SpectrumPixelCount);
+            endBin = std::clamp(RndToInt(BlkFxParam::getHz(parameter) * hzToBin),
+                                startBin, maximumBin);
+        }
+
+        float maximumPower = 0.0f;
+        for(int channel = 0; channel < DtBlkFx::AUDIO_CHANNELS; ++channel)
+        {
+            const cplxf* bins = engine->FFTdata(channel);
+            const float scale = stage == 1 ? engine->_chan[channel].out_pwr_scale : 1.0f;
+            float channelMaximum = norm(bins[startBin]) * scale;
+            for(int bin = startBin + 1; bin < endBin; ++bin)
+                channelMaximum = std::max(channelMaximum, norm(bins[bin]) * scale);
+            maximumPower = std::max(maximumPower, channelMaximum);
+        }
+        destination[pixel] = std::max(destination[pixel], maximumPower);
+        startBin = endBin;
+    }
+
+    if(stage != 1)
+        return;
+    const std::int64_t lineEnd = static_cast<std::int64_t>(engine->_blk_samp_abs) + engine->_time_fft_n;
+    if(lineEnd - previousSpectrumSamplePosition < MinimumSpectrumSamplesPerLine)
+        return;
+
+    spectrumFrame.samplePosition = engine->_blk_samp_abs;
+    spectrumFrame.timeFftSize = static_cast<std::int32_t>(engine->_time_fft_n);
+    if(spectrumExchange)
+    {
+        Steinberg::Vst::DataExchangeBlock block = spectrumExchange->getCurrentOrNewBlock();
+        if(block.blockID != Steinberg::Vst::InvalidDataExchangeBlockID &&
+           block.size >= sizeof(SpectrumFrame))
+        {
+            std::memcpy(block.data, &spectrumFrame, sizeof(SpectrumFrame));
+            spectrumExchange->sendCurrentBlock();
+        }
+    }
+    previousSpectrumSamplePosition = lineEnd;
+    spectrumLineEmpty = true;
 }
 
 Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& data)

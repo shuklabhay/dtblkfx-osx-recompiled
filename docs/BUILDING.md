@@ -22,9 +22,25 @@ build/VST3/Release/DtBlkFx.vst3
 ```
 
 The default build targets macOS 11 or newer on both Apple Silicon and Intel.
-The build script also runs Steinberg's validator against the finished bundle.
+The build script also runs Steinberg's validator and the local host smoke test
+against the finished bundle in native Apple Silicon mode and, when Rosetta is
+available, Intel mode.
 
 The VST3 exposes the original 44 normalized parameters plus the standard VST3
-bypass parameter. It uses the host's generic parameter editor. Recreating and
-cross-checking the original custom editor is intentionally separate from this
-processing port.
+bypass parameter. Its native AppKit editor uses the original 410 by 409 pixel
+artwork and layout, supports parameter editing and effect menus, and renders
+the preserved engine's live input and output FFT data through VST3's real-time
+data exchange API. No JUCE or VSTGUI binary dependency is used.
+
+Run the complete verification loop independently with:
+
+```sh
+./scripts/test.sh
+```
+
+The smoke host loads the module, round-trips controller state, attaches and
+renders the NSView editor, edits a parameter, processes deterministic stereo
+audio, verifies that live FFT data changes the editor before and after a
+disable/re-enable cycle, and detaches the view. Set `DTBLKFX_SMOKE_PNG` to an
+output path when running `dtblkfx_smoke` directly to save its final live editor
+render as a PNG.

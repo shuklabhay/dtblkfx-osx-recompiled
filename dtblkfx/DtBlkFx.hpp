@@ -84,6 +84,12 @@ public: // override AudioEffect methods
 
 public: // our own methods
 
+	#ifdef DTBLKFX_HEADLESS
+	using SpectrumCallback = void (*)(void*, DtBlkFx&, int);
+	void setSpectrumCallback(void* context, SpectrumCallback callback)
+		{ _spectrum_callback_context = context; _spectrum_callback = callback; }
+	#endif
+
 	// cast the editor to our gui
 	#ifdef DTBLKFX_HEADLESS
 	Gui* gui() { return NULL; }
@@ -367,6 +373,11 @@ public: // gui state stuff
 	bool isMorphMode() const { return _param_morph_mode; }
 
 public:
+	#ifdef DTBLKFX_HEADLESS
+	void* _spectrum_callback_context {};
+	SpectrumCallback _spectrum_callback {};
+	#endif
+
 	// contiguous space for chunk data & presets when saving
 	std::valarray<unsigned char> _chunk_data;
 };

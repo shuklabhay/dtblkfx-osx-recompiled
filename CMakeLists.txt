@@ -10,6 +10,10 @@ endif()
 
 project(dtblk_osx_recompiled VERSION 1.1.1 LANGUAGES C CXX)
 
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -78,14 +82,20 @@ target_link_libraries(dtblkfx_engine PRIVATE fftw3f)
 set(DTBLKFX_VST3_SOURCES
     vst3/controller.cpp
     vst3/controller.hpp
+    vst3/editor.hpp
     vst3/factory.cpp
     vst3/ids.hpp
     vst3/processor.cpp
     vst3/processor.hpp
     vst3/state.cpp
     vst3/state.hpp
+    vst3/spectrum.hpp
     vst3/version.hpp
 )
+
+if(APPLE)
+    list(APPEND DTBLKFX_VST3_SOURCES vst3/editor.mm)
+endif()
 
 smtg_add_vst3plugin(DtBlkFx
     PACKAGE_NAME "DtBlkFx"
@@ -94,6 +104,10 @@ smtg_add_vst3plugin(DtBlkFx
 target_compile_features(DtBlkFx PRIVATE cxx_std_17)
 target_include_directories(DtBlkFx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DtBlkFx PRIVATE dtblkfx_engine fftw3f sdk)
+if(APPLE)
+    target_link_libraries(DtBlkFx PRIVATE "-framework Cocoa")
+    set_source_files_properties(vst3/editor.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+endif()
 
 file(GLOB DTBLKFX_RESOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/*")
 smtg_target_add_plugin_resources(DtBlkFx
@@ -116,4 +130,24 @@ if(APPLE AND NOT XCODE)
         COMMAND /usr/bin/codesign --force --sign - "${DTBLKFX_BUNDLE_PATH}"
         VERBATIM
     )
+endif()
+
+if(APPLE)
+    add_executable(dtblkfx_smoke
+        tests/smoke_host.mm
+        ${public_sdk_SOURCE_DIR}/source/common/memorystream.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/plugprovider.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+    )
+    target_compile_features(dtblkfx_smoke PRIVATE cxx_std_17)
+    target_link_libraries(dtblkfx_smoke PRIVATE sdk_hosting "-framework Cocoa")
+    set_target_properties(dtblkfx_smoke PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
+    set_source_files_properties(
+        tests/smoke_host.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+    )
+    smtg_target_setup_universal_binary(dtblkfx_smoke)
 endif()

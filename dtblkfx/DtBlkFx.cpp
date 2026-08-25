@@ -1594,13 +1594,17 @@ inline void DtBlkFx::_process(float** in_buf, long buf_n)
     else {
       // normal case, we need to do the FFTs
       doFFT();
-      #ifndef DTBLKFX_HEADLESS
+      #ifdef DTBLKFX_HEADLESS
+        if(_spectrum_callback) _spectrum_callback(_spectrum_callback_context, *this, 0/*input*/);
+      #else
         if(gui()) gui()->FFTDataRdy(0/*input*/);
       #endif
       prepMixOut();
 
       procFFT();
-      #ifndef DTBLKFX_HEADLESS
+      #ifdef DTBLKFX_HEADLESS
+        if(_spectrum_callback) _spectrum_callback(_spectrum_callback_context, *this, 1/*output*/);
+      #else
         if(gui()) gui()->FFTDataRdy(1/*output*/);
       #endif
       ifftAndMixOut();
