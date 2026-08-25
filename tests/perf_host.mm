@@ -248,8 +248,10 @@ public:
            processor->setProcessing(true) != Steinberg::kResultOk)
             return false;
 
+        const bool sendParameters = std::getenv("DTBLKFX_PERF_NO_PARAMETERS") == nullptr;
         Steinberg::Vst::ParameterChanges changes(44);
-        for(Steinberg::Vst::ParamID parameter = 0; parameter < scenario.parameters.size(); ++parameter)
+        for(Steinberg::Vst::ParamID parameter = 0;
+            sendParameters && parameter < scenario.parameters.size(); ++parameter)
         {
             Steinberg::int32 queueIndex = 0;
             Steinberg::Vst::IParamValueQueue* queue = changes.addParameterData(parameter, queueIndex);
@@ -282,7 +284,7 @@ public:
         data.inputs = &inputBus;
         data.outputs = &outputBus;
         data.processContext = &context;
-        data.inputParameterChanges = &changes;
+        data.inputParameterChanges = sendParameters ? &changes : nullptr;
 
         std::uint64_t hash = 1469598103934665603ULL;
         std::int64_t firstOutput = -1;

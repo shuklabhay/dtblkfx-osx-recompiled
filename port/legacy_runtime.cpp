@@ -69,6 +69,17 @@ bool InitializeLegacyRuntime()
     return initialized;
 }
 
+float LegacyDefaultParameter(std::size_t index)
+{
+    if(index == BlkFxParam::DELAY)
+        return 0.0f;
+    if(index == BlkFxParam::FFT_LEN)
+        return BlkFxParam::getFFTLenParam(16);
+    if(index == BlkFxParam::OVERLAP)
+        return 0.35f;
+    return 0.0f;
+}
+
 std::size_t LegacyPresetCount()
 {
     return g_blk_fx_presets.size();

@@ -96,7 +96,9 @@ The 44 normalized parameter mappings, eight-stage order, 31 effect indices,
 factory preset data, legacy chunk state, stereo processing, artwork, and manual
 control behavior are preserved. The VST3 adds a standard bypass parameter, a
 native AppKit editor with live input/output spectrograms, VST3 factory-program
-discovery, and correct disable/re-enable lifecycle handling.
+discovery, an in-editor factory-preset selector, artifact-free bypass state
+advancement, deterministic startup parameter ordering, and correct
+disable/re-enable lifecycle handling.
 
 A new instance intentionally defaults Delay to zero at the user's request. The
 original one-beat value remains selectable and remains in historical presets.

@@ -71,6 +71,8 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
     try
     {
         engine = std::make_unique<DtBlkFx>();
+        for(std::size_t index = 0; index < LegacyParameterCount; ++index)
+            engine->setParameter(static_cast<VstInt32>(index), LegacyDefaultParameter(index));
         engine->setSpectrumCallback(this, [](void* context, DtBlkFx&, int stage) {
             static_cast<Processor*>(context)->captureSpectrum(stage);
         });
@@ -146,6 +148,8 @@ Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::Process
     {
         engine->setSampleRate(static_cast<float>(setup.sampleRate));
         engine->setBlockSize(setup.maxSamplesPerBlock);
+        for(auto& channel : bypassDry)
+            channel.resize(static_cast<std::size_t>(setup.maxSamplesPerBlock));
     }
     return result;
 }
@@ -222,11 +226,17 @@ void Processor::processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int
 
     if(bypass)
     {
+        std::array<float*, 2> dryInputs {
+            bypassDry[0].data(),
+            bypassDry[1].data(),
+        };
         for(std::size_t channel = 0; channel < outputs.size(); ++channel)
-        {
-            if(inputs[channel] != outputs[channel])
-                std::memmove(outputs[channel], inputs[channel], static_cast<std::size_t>(sampleCount) * sizeof(float));
-        }
+            std::memcpy(dryInputs[channel], inputs[channel],
+                        static_cast<std::size_t>(sampleCount) * sizeof(float));
+        engine->processReplacing(inputs.data(), outputs.data(), sampleCount);
+        for(std::size_t channel = 0; channel < outputs.size(); ++channel)
+            std::memcpy(outputs[channel], dryInputs[channel],
+                        static_cast<std::size_t>(sampleCount) * sizeof(float));
         return;
     }
 
@@ -348,8 +358,11 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
         }
     }
 
-    std::stable_sort(parameterEvents.begin(), parameterEvents.end(), [](const ParameterEvent& left, const ParameterEvent& right) {
-        return left.offset < right.offset;
+    std::stable_sort(parameterEvents.begin(), parameterEvents.end(),
+                     [](const ParameterEvent& left, const ParameterEvent& right) {
+        if(left.offset != right.offset)
+            return left.offset < right.offset;
+        return left.id == ProgramParameterId && right.id != ProgramParameterId;
     });
 
     updateTiming(data.processContext, 0);

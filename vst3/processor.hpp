@@ -55,6 +55,7 @@ private:
     std::unique_ptr<Steinberg::Vst::DataExchangeHandler> spectrumExchange;
     SpectrumFrame spectrumFrame;
     std::array<int, SpectrumPixelCount> spectrumEndBins {};
+    std::array<std::vector<float>, 2> bypassDry;
     std::vector<ParameterEvent> parameterEvents;
     std::atomic_bool spectrumEnabled {false};
     std::atomic_bool spectrumResetRequested {true};

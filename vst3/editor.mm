@@ -4,9 +4,11 @@
 #include "editor.hpp"
 
 #include "controller.hpp"
+#include "ids.hpp"
 #include "dtblkfx/BlkFxParam.h"
 #include "dtblkfx/FxRun1_0.h"
 #include "dtblkfx/rfftw_float.h"
+#include "port/legacy_runtime.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -18,7 +20,9 @@ constexpr CGFloat EditorWidth = 410.0;
 constexpr CGFloat GlobalHeight = 26.0;
 constexpr CGFloat SpectrumHeight = 191.0;
 constexpr CGFloat EffectHeight = 24.0;
-constexpr CGFloat EditorHeight = GlobalHeight + SpectrumHeight + EffectHeight * BlkFxParam::NUM_FX_SETS;
+constexpr CGFloat ContentHeight = GlobalHeight + SpectrumHeight + EffectHeight * BlkFxParam::NUM_FX_SETS;
+constexpr CGFloat PresetHeight = 30.0;
+constexpr CGFloat EditorHeight = ContentHeight + PresetHeight;
 constexpr NSInteger SpectrumHeights[] = {92, 93};
 
 struct SpectrumColor
@@ -123,6 +127,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
 @interface DtBlkEditorNSView : NSView
 - (instancetype)initWithFrame:(NSRect)frame controller:(DtBlkVst3::Controller*)controller;
 - (void)pushSpectrumFrame:(const DtBlkVst3::SpectrumFrame*)frame;
+- (void)syncPresetSelection;
 @end
 
 @implementation DtBlkEditorNSView
@@ -133,6 +138,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
     NSImage* _effectImage;
     NSBitmapImageRep* _spectrumBitmap[2];
     NSImage* _spectrumImage[2];
+    NSPopUpButton* _presetPopup;
     NSInteger _spectrumRows[2];
     Steinberg::Vst::ParamID _dragParameter;
     NSRect _dragRect;
@@ -170,6 +176,22 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
             [_spectrumImage[index] addRepresentation:_spectrumBitmap[index]];
             _spectrumRows[index] = 0;
         }
+        _presetPopup = [[NSPopUpButton alloc]
+            initWithFrame:NSMakeRect(58.0, ContentHeight + 3.0, EditorWidth - 64.0, 24.0)
+               pullsDown:NO];
+        _presetPopup.target = self;
+        _presetPopup.action = @selector(selectPreset:);
+        [_presetPopup removeAllItems];
+        for(std::size_t index = 0; index < LegacyPresetCount(); ++index)
+        {
+            NSMenuItem* item = [[NSMenuItem alloc]
+                initWithTitle:[NSString stringWithUTF8String:LegacyPresetName(index)]
+                       action:nil
+                keyEquivalent:@""];
+            [_presetPopup.menu addItem:item];
+        }
+        [self addSubview:_presetPopup];
+        [self syncPresetSelection];
         self.wantsLayer = YES;
     }
     return self;
@@ -254,6 +276,31 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
             x += effectWidths[column];
         }
     }
+
+    [[NSColor colorWithWhite:0.12 alpha:1.0] setFill];
+    NSRectFill(NSMakeRect(0, ContentHeight, EditorWidth, PresetHeight));
+    DrawOutlinedText(@"Preset", NSMakeRect(4.0, ContentHeight + 8.0, 52.0, 14.0), 10.0);
+}
+
+- (void)syncPresetSelection
+{
+    const std::size_t count = LegacyPresetCount();
+    if(!_presetPopup || count == 0)
+        return;
+    const double normalized = _controller->getParamNormalized(DtBlkVst3::ProgramParameterId);
+    const NSInteger index = static_cast<NSInteger>(std::lround(
+        std::clamp(normalized, 0.0, 1.0) * static_cast<double>(count - 1)));
+    [_presetPopup selectItemAtIndex:index];
+}
+
+- (void)selectPreset:(NSPopUpButton*)sender
+{
+    const std::size_t count = LegacyPresetCount();
+    if(count < 2 || sender.indexOfSelectedItem < 0)
+        return;
+    _controller->editParameter(DtBlkVst3::ProgramParameterId,
+                               static_cast<double>(sender.indexOfSelectedItem) /
+                                   static_cast<double>(count - 1));
 }
 
 - (void)pushSpectrumFrame:(const DtBlkVst3::SpectrumFrame*)frame
@@ -298,7 +345,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
     }
 
     const CGFloat effectsTop = GlobalHeight + SpectrumHeight;
-    if(point.y < effectsTop || point.y >= EditorHeight)
+    if(point.y < effectsTop || point.y >= ContentHeight)
         return NO;
 
     const int row = std::clamp(static_cast<int>((point.y - effectsTop) / EffectHeight), 0,
@@ -487,7 +534,11 @@ Steinberg::tresult PLUGIN_API EditorView::onSize(Steinberg::ViewRect* size)
 void EditorView::invalidate()
 {
     if(nativeView)
-        [(__bridge DtBlkEditorNSView*)nativeView setNeedsDisplay:YES];
+    {
+        DtBlkEditorNSView* view = (__bridge DtBlkEditorNSView*)nativeView;
+        [view syncPresetSelection];
+        [view setNeedsDisplay:YES];
+    }
 }
 
 void EditorView::pushSpectrumFrame(const SpectrumFrame& frame)

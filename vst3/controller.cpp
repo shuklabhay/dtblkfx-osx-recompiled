@@ -37,11 +37,7 @@ void ParameterName(Steinberg::Vst::ParamID id, char* output, std::size_t outputS
 
 double DefaultValue(Steinberg::Vst::ParamID id)
 {
-    if(id == BlkFxParam::FFT_LEN)
-        return BlkFxParam::getFFTLenParam(16);
-    if(id == BlkFxParam::OVERLAP)
-        return 0.35;
-    return 0.0;
+    return LegacyDefaultParameter(id);
 }
 }
 
@@ -108,6 +104,8 @@ Steinberg::tresult PLUGIN_API Controller::setComponentState(Steinberg::IBStream*
             static_cast<double>(std::clamp<Steinberg::int32>(
                 program, 0, static_cast<Steinberg::int32>(LegacyPresetCount() - 1))) /
                 static_cast<double>(LegacyPresetCount() - 1));
+    for(EditorView* editor : editors)
+        editor->invalidate();
     return Steinberg::kResultOk;
 }
 

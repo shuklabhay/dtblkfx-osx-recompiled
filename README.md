@@ -6,10 +6,14 @@ and state format behind a small native VST3/AppKit boundary. It does not use
 JUCE.
 
 The current bundle runs natively on Apple Silicon and Intel Macs, exposes the
-original 44 controls and 43 factory presets, displays live input/output
-spectrograms, supports host bypass and state recall, and defaults new instances
-to zero user delay. The FFT still has the algorithmic look-ahead inherent to
-block processing.
+original 44 controls and 43 factory presets, includes a visible factory-preset
+selector, displays live input/output spectrograms, supports artifact-free host
+bypass and state recall, and defaults new instances to zero user delay. The FFT
+still has the algorithmic look-ahead inherent to block processing.
+
+Ableton Live does not show VST3 program lists in its device-level preset field.
+Open the DtBlkFx window with Live's wrench button and use the `Preset` selector
+at the bottom of the editor.
 
 ## Status
 

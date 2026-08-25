@@ -14,6 +14,7 @@
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -106,13 +107,24 @@ int main(int argc, const char* argv[])
 
         Steinberg::ViewRect size;
         if(!Check(view->getSize(&size) == Steinberg::kResultTrue, "editor size unavailable") ||
-           !Check(size.getWidth() == 410 && size.getHeight() == 409, "unexpected editor dimensions"))
+           !Check(size.getWidth() == 410 && size.getHeight() == 439, "unexpected editor dimensions"))
             return 1;
 
         NSView* parent = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, size.getWidth(), size.getHeight())];
         if(!Check(view->attached((__bridge void*)parent, Steinberg::kPlatformTypeNSView) == Steinberg::kResultTrue,
                   "editor attach failed") ||
            !Check(parent.subviews.count == 1, "editor did not attach one native child view"))
+            return 1;
+
+        NSPopUpButton* presetPopup = nil;
+        for(NSView* subview in parent.subviews.firstObject.subviews)
+        {
+            if([subview isKindOfClass:NSPopUpButton.class])
+                presetPopup = static_cast<NSPopUpButton*>(subview);
+        }
+        if(!Check(presetPopup != nil, "editor has no factory-preset selector") ||
+           !Check(presetPopup.numberOfItems == 43, "editor preset selector is incomplete") ||
+           !Check(presetPopup.indexOfSelectedItem == 2, "editor preset selector is out of sync"))
             return 1;
 
         NSData* before = Render(parent);
@@ -179,6 +191,29 @@ int main(int argc, const char* argv[])
                data.inputs = &inputBus;
                data.outputs = &outputBus;
 
+               Steinberg::Vst::ParameterChanges startupChanges(2);
+               Steinberg::int32 startupQueueIndex {};
+               Steinberg::int32 startupPointIndex {};
+               auto* delayQueue = startupChanges.addParameterData(1, startupQueueIndex);
+               auto* startupProgramQueue = startupChanges.addParameterData(
+                   DtBlkVst3::ProgramParameterId, startupQueueIndex);
+               if(!delayQueue || !startupProgramQueue ||
+                  delayQueue->addPoint(0, 0.0, startupPointIndex) != Steinberg::kResultTrue ||
+                  startupProgramQueue->addPoint(0, 0.0, startupPointIndex) != Steinberg::kResultTrue)
+                   return false;
+               data.inputParameterChanges = &startupChanges;
+               if(processor->process(data) != Steinberg::kResultOk)
+                   return false;
+               data.inputParameterChanges = nullptr;
+               Steinberg::MemoryStream startupState;
+               if(component->getState(&startupState) != Steinberg::kResultOk ||
+                  startupState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr) != Steinberg::kResultOk ||
+                  controller->setComponentState(&startupState) != Steinberg::kResultOk ||
+                  controller->getParamNormalized(1) != 0.0 ||
+                  processor->setProcessing(false) != Steinberg::kResultOk ||
+                  processor->setProcessing(true) != Steinberg::kResultOk)
+                   return false;
+
                std::uint32_t noise = 0x12345678;
                struct AudioResult
                {
@@ -230,6 +265,66 @@ int main(int argc, const char* argv[])
                NSData* secondSpectrum = Render(parent);
                if([firstSpectrum isEqualToData:secondSpectrum])
                    return false;
+
+               if(processor->setProcessing(false) != Steinberg::kResultOk ||
+                  processor->setProcessing(true) != Steinberg::kResultOk)
+                   return false;
+               std::fill(inputLeft.begin(), inputLeft.end(), 0.0f);
+               std::fill(inputRight.begin(), inputRight.end(), 0.0f);
+               inputLeft[0] = 1.0f;
+               Steinberg::Vst::ParameterChanges delayedImpulse(1);
+               Steinberg::int32 delayedQueueIndex {};
+               Steinberg::int32 delayedPointIndex {};
+               auto* delayedQueue = delayedImpulse.addParameterData(1, delayedQueueIndex);
+               if(!delayedQueue ||
+                  delayedQueue->addPoint(0, 16.0 / 255.0, delayedPointIndex) != Steinberg::kResultTrue)
+                   return false;
+               data.inputParameterChanges = &delayedImpulse;
+               if(processor->process(data) != Steinberg::kResultOk)
+                   return false;
+               std::fill(inputLeft.begin(), inputLeft.end(), 0.0f);
+
+               Steinberg::Vst::ParameterChanges bypassOn(1);
+               Steinberg::int32 bypassQueueIndex {};
+               Steinberg::int32 bypassPointIndex {};
+               auto* bypassOnQueue = bypassOn.addParameterData(DtBlkVst3::BypassParameterId,
+                                                                bypassQueueIndex);
+               if(!bypassOnQueue ||
+                  bypassOnQueue->addPoint(0, 1.0, bypassPointIndex) != Steinberg::kResultTrue)
+                   return false;
+               data.inputParameterChanges = &bypassOn;
+               for(int block = 0; block < 50; ++block)
+               {
+                   if(processor->process(data) != Steinberg::kResultOk ||
+                      !std::equal(outputLeft.begin(), outputLeft.end(), inputLeft.begin()) ||
+                      !std::equal(outputRight.begin(), outputRight.end(), inputRight.begin()))
+                       return false;
+                   data.inputParameterChanges = nullptr;
+               }
+
+               Steinberg::Vst::ParameterChanges bypassOff(1);
+               auto* bypassOffQueue = bypassOff.addParameterData(DtBlkVst3::BypassParameterId,
+                                                                  bypassQueueIndex);
+               if(!bypassOffQueue ||
+                  bypassOffQueue->addPoint(0, 0.0, bypassPointIndex) != Steinberg::kResultTrue)
+                   return false;
+               data.inputParameterChanges = &bypassOff;
+               float postBypassMaximum = 0.0f;
+               for(int block = 0; block < 50; ++block)
+               {
+                   if(processor->process(data) != Steinberg::kResultOk)
+                       return false;
+                   data.inputParameterChanges = nullptr;
+                   for(float sample : outputLeft)
+                       postBypassMaximum = std::max(postBypassMaximum, std::abs(sample));
+                   for(float sample : outputRight)
+                       postBypassMaximum = std::max(postBypassMaximum, std::abs(sample));
+               }
+               if(postBypassMaximum > 1e-5f ||
+                  processor->setProcessing(false) != Steinberg::kResultOk ||
+                  processor->setProcessing(true) != Steinberg::kResultOk)
+                   return false;
+
                Steinberg::Vst::ParameterChanges programChange(1);
                Steinberg::int32 queueIndex {};
                Steinberg::int32 pointIndex {};
@@ -264,7 +359,7 @@ int main(int argc, const char* argv[])
             return 1;
 
         Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
-        std::cout << "PASS: module, programs, controller state, audio, live FFT, disable/re-enable, NSView lifecycle\n";
+        std::cout << "PASS: module, preset selector, ordered startup, state, audio, live FFT, bypass continuity, disable/re-enable, NSView lifecycle\n";
         return 0;
     }
 }

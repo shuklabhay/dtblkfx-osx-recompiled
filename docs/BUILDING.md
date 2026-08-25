@@ -28,10 +28,11 @@ available, Intel mode.
 
 The VST3 exposes the original 44 normalized parameters, all 43 named factory
 presets through the VST3 program-list API, and the standard VST3 bypass
-parameter. Its native AppKit editor uses the original 410 by 409 pixel
-artwork and layout, supports parameter editing and effect menus, and renders
-the preserved engine's live input and output FFT data through VST3's real-time
-data exchange API. No JUCE or VSTGUI binary dependency is used.
+parameter. Its native AppKit editor preserves the original 410 by 409 pixel
+artwork and control layout, adds a 30-pixel factory-preset selector, supports
+parameter editing and effect menus, and renders the preserved engine's live
+input and output FFT data through VST3's real-time data exchange API. No JUCE or
+VSTGUI binary dependency is used.
 
 Run the complete verification loop independently with:
 
@@ -40,12 +41,13 @@ Run the complete verification loop independently with:
 ```
 
 The smoke host loads the module, verifies and selects the historical program
-bank, round-trips controller and component state, attaches and renders the
-NSView editor, edits a parameter, processes deterministic stereo audio,
-verifies that live FFT data changes the editor before and after a
-disable/re-enable cycle, and detaches the view. Set `DTBLKFX_SMOKE_PNG` to an
-output path when running `dtblkfx_smoke` directly to save its final live editor
-render as a PNG.
+bank and visible selector, verifies host-independent startup ordering,
+round-trips controller and component state, attaches and renders the NSView
+editor, edits a parameter, processes deterministic stereo audio, proves that a
+long-delay impulse cannot leak out after bypass, verifies that live FFT data
+changes the editor before and after a disable/re-enable cycle, and detaches the
+view. Set `DTBLKFX_SMOKE_PNG` to an output path when running `dtblkfx_smoke`
+directly to save its final live editor render as a PNG.
 
 The performance host renders a deterministic 60-scenario corpus covering every
 effect type, multi-effect chains, every stage of a phase-sensitive chain, five
