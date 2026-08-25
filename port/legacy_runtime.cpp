@@ -18,10 +18,7 @@
 
 std::vector<VstProgram<BlkFxParam::TOTAL_NUM>> g_blk_fx_presets;
 
-bool GlobalInitOk()
-{
-    return false;
-}
+bool GlobalInitOk() { return false; }
 
 namespace
 {
@@ -55,12 +52,14 @@ bool InitializeLegacyRuntime()
     static bool initialized = false;
     try
     {
-        std::call_once(once, [] {
-            if(!LoadPresets())
-                return;
-            CreateFFTWfPlans();
-            initialized = true;
-        });
+        std::call_once(once,
+            []
+            {
+                if(!LoadPresets())
+                    return;
+                CreateFFTWfPlans();
+                initialized = true;
+            });
     }
     catch(...)
     {
@@ -80,10 +79,7 @@ float LegacyDefaultParameter(std::size_t index)
     return 0.0f;
 }
 
-std::size_t LegacyPresetCount()
-{
-    return g_blk_fx_presets.size();
-}
+std::size_t LegacyPresetCount() { return g_blk_fx_presets.size(); }
 
 const char* LegacyPresetName(std::size_t index)
 {
@@ -96,7 +92,6 @@ bool ReadLegacyPreset(std::size_t index, std::array<float, 44>& parameters)
 {
     if(index >= g_blk_fx_presets.size())
         return false;
-    std::copy(g_blk_fx_presets[index].params.begin(), g_blk_fx_presets[index].params.end(),
-              parameters.begin());
+    std::copy(g_blk_fx_presets[index].params.begin(), g_blk_fx_presets[index].params.end(), parameters.begin());
     return true;
 }

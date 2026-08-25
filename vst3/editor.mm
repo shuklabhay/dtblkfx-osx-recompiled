@@ -19,7 +19,7 @@ constexpr CGFloat GlobalHeight = 26.0;
 constexpr CGFloat SpectrumHeight = 191.0;
 constexpr CGFloat EffectHeight = 24.0;
 constexpr CGFloat EditorHeight = GlobalHeight + SpectrumHeight + EffectHeight * BlkFxParam::NUM_FX_SETS;
-constexpr NSInteger SpectrumHeights[] = {92, 93};
+constexpr NSInteger SpectrumHeights[] = { 92, 93 };
 
 struct SpectrumColor
 {
@@ -31,25 +31,30 @@ struct SpectrumColor
 SpectrumColor MapSpectrumColor(float power)
 {
     static constexpr SpectrumColor colors[] = {
-        {0, 0, 0}, {0, 0, 255}, {0, 255, 255}, {0, 204, 0}, {255, 255, 0}, {255, 0, 0},
+        { 0, 0, 0 },
+        { 0, 0, 255 },
+        { 0, 255, 255 },
+        { 0, 204, 0 },
+        { 255, 255, 0 },
+        { 255, 0, 0 },
     };
     constexpr float minimumPower = 1e-8f;
     constexpr float maximumPower = 0.04f;
     if(!(power > minimumPower))
         return colors[0];
-    const float position = std::clamp((std::log(power) - std::log(minimumPower)) /
-                                      (std::log(maximumPower) - std::log(minimumPower)),
-                                      0.0f, 1.0f);
+    const float position = std::clamp(
+        (std::log(power) - std::log(minimumPower)) / (std::log(maximumPower) - std::log(minimumPower)), 0.0f, 1.0f);
     const float scaled = position * 5.0f;
     const int segment = std::min(static_cast<int>(scaled), 4);
     const float fraction = scaled - static_cast<float>(segment);
-    const auto interpolate = [fraction](unsigned char start, unsigned char end) {
-        return static_cast<unsigned char>(std::lround(static_cast<float>(start) +
-                                                      fraction * (static_cast<float>(end) - start)));
+    const auto interpolate = [fraction](unsigned char start, unsigned char end)
+    {
+        return static_cast<unsigned char>(
+            std::lround(static_cast<float>(start) + fraction * (static_cast<float>(end) - start)));
     };
-    return {interpolate(colors[segment].red, colors[segment + 1].red),
-            interpolate(colors[segment].green, colors[segment + 1].green),
-            interpolate(colors[segment].blue, colors[segment + 1].blue)};
+    return { interpolate(colors[segment].red, colors[segment + 1].red),
+        interpolate(colors[segment].green, colors[segment + 1].green),
+        interpolate(colors[segment].blue, colors[segment + 1].blue) };
 }
 
 NSString* EffectName(double value)
@@ -77,20 +82,20 @@ NSString* ParameterText(Steinberg::Vst::ParamID id, double value)
     const int effectParameter = static_cast<int>((id - BlkFxParam::NUM_GLOBAL_PARAMS) % BlkFxParam::NUM_FX_PARAMS);
     switch(effectParameter)
     {
-        case BlkFxParam::FX_FREQ_A:
-        case BlkFxParam::FX_FREQ_B:
-        {
-            const float hz = BlkFxParam::getHz(static_cast<float>(value));
-            if(hz >= 1000.0f)
-                return [NSString stringWithFormat:@"%.2fkHz", hz / 1000.0f];
-            return [NSString stringWithFormat:@"%.1fHz", hz];
-        }
-        case BlkFxParam::FX_AMP:
-            return value <= 0.0 ? @"-inf dB" : [NSString stringWithFormat:@"%.1f dB", BlkFxParam::getEffectAmp(value)];
-        case BlkFxParam::FX_TYPE:
-            return EffectName(value);
-        default:
-            return [NSString stringWithFormat:@"%.0f%%", value * 100.0];
+    case BlkFxParam::FX_FREQ_A:
+    case BlkFxParam::FX_FREQ_B:
+    {
+        const float hz = BlkFxParam::getHz(static_cast<float>(value));
+        if(hz >= 1000.0f)
+            return [NSString stringWithFormat:@"%.2fkHz", hz / 1000.0f];
+        return [NSString stringWithFormat:@"%.1fHz", hz];
+    }
+    case BlkFxParam::FX_AMP:
+        return value <= 0.0 ? @"-inf dB" : [NSString stringWithFormat:@"%.1f dB", BlkFxParam::getEffectAmp(value)];
+    case BlkFxParam::FX_TYPE:
+        return EffectName(value);
+    default:
+        return [NSString stringWithFormat:@"%.0f%%", value * 100.0];
     }
 }
 
@@ -98,20 +103,20 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
 {
     NSMutableParagraphStyle* paragraph = [[NSMutableParagraphStyle alloc] init];
     paragraph.alignment = NSTextAlignmentCenter;
-    NSDictionary* shadowAttributes = @{
-        NSFontAttributeName: [NSFont boldSystemFontOfSize:size],
-        NSForegroundColorAttributeName: NSColor.blackColor,
-        NSParagraphStyleAttributeName: paragraph,
+    NSDictionary* shadowAttributes = @ {
+        NSFontAttributeName : [NSFont boldSystemFontOfSize:size],
+        NSForegroundColorAttributeName : NSColor.blackColor,
+        NSParagraphStyleAttributeName : paragraph,
     };
-    NSDictionary* textAttributes = @{
-        NSFontAttributeName: [NSFont boldSystemFontOfSize:size],
-        NSForegroundColorAttributeName: NSColor.whiteColor,
-        NSParagraphStyleAttributeName: paragraph,
+    NSDictionary* textAttributes = @ {
+        NSFontAttributeName : [NSFont boldSystemFontOfSize:size],
+        NSForegroundColorAttributeName : NSColor.whiteColor,
+        NSParagraphStyleAttributeName : paragraph,
     };
-    for(NSValue* offsetValue in @[[NSValue valueWithPoint:NSMakePoint(-1, 0)],
-                                  [NSValue valueWithPoint:NSMakePoint(1, 0)],
-                                  [NSValue valueWithPoint:NSMakePoint(0, -1)],
-                                  [NSValue valueWithPoint:NSMakePoint(0, 1)]])
+    for(NSValue* offsetValue in @[
+            [NSValue valueWithPoint:NSMakePoint(-1, 0)], [NSValue valueWithPoint:NSMakePoint(1, 0)],
+            [NSValue valueWithPoint:NSMakePoint(0, -1)], [NSValue valueWithPoint:NSMakePoint(0, 1)]
+        ])
     {
         NSPoint offset = offsetValue.pointValue;
         [text drawInRect:NSOffsetRect(rect, offset.x, offset.y) withAttributes:shadowAttributes];
@@ -146,27 +151,30 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         _controller = controller;
         _dragParameter = Steinberg::Vst::kNoParamId;
         NSBundle* bundle = [NSBundle bundleForClass:self.class];
-        _globalImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_global_ctrl" withExtension:@"png"]];
-        _splashImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_splash" withExtension:@"png"]];
-        _effectImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_fx_bg" withExtension:@"png"]];
+        _globalImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_global_ctrl"
+                                                                       withExtension:@"png"]];
+        _splashImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_splash"
+                                                                       withExtension:@"png"]];
+        _effectImage = [[NSImage alloc] initWithContentsOfURL:[bundle URLForResource:@"stereo_fx_bg"
+                                                                       withExtension:@"png"]];
         for(int index = 0; index < 2; ++index)
         {
-            _spectrumBitmap[index] = [[NSBitmapImageRep alloc]
-                initWithBitmapDataPlanes:nil
-                              pixelsWide:DtBlkVst3::SpectrumPixelCount
-                              pixelsHigh:SpectrumHeights[index]
-                           bitsPerSample:8
-                         samplesPerPixel:4
-                                hasAlpha:YES
-                                isPlanar:NO
-                          colorSpaceName:NSDeviceRGBColorSpace
-                             bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
-                              bytesPerRow:DtBlkVst3::SpectrumPixelCount * 4
-                             bitsPerPixel:32];
+            _spectrumBitmap[index] =
+                [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nil
+                                                        pixelsWide:DtBlkVst3::SpectrumPixelCount
+                                                        pixelsHigh:SpectrumHeights[index]
+                                                     bitsPerSample:8
+                                                   samplesPerPixel:4
+                                                          hasAlpha:YES
+                                                          isPlanar:NO
+                                                    colorSpaceName:NSDeviceRGBColorSpace
+                                                      bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
+                                                       bytesPerRow:DtBlkVst3::SpectrumPixelCount * 4
+                                                      bitsPerPixel:32];
             std::memset(_spectrumBitmap[index].bitmapData, 0,
-                        static_cast<std::size_t>(_spectrumBitmap[index].bytesPerRow) * SpectrumHeights[index]);
-            _spectrumImage[index] = [[NSImage alloc]
-                initWithSize:NSMakeSize(DtBlkVst3::SpectrumPixelCount, SpectrumHeights[index])];
+                static_cast<std::size_t>(_spectrumBitmap[index].bytesPerRow) * SpectrumHeights[index]);
+            _spectrumImage[index] =
+                [[NSImage alloc] initWithSize:NSMakeSize(DtBlkVst3::SpectrumPixelCount, SpectrumHeights[index])];
             [_spectrumImage[index] addRepresentation:_spectrumBitmap[index]];
             _spectrumRows[index] = 0;
         }
@@ -200,24 +208,23 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         if(_spectrumRows[index] > 0)
         {
             [_spectrumImage[index]
-                drawInRect:NSMakeRect(5.0, spectrumY, DtBlkVst3::SpectrumPixelCount,
-                                      SpectrumHeights[index])
-                  fromRect:NSZeroRect
-                 operation:NSCompositingOperationCopy
-                  fraction:1.0
-            respectFlipped:YES
-                     hints:nil];
+                    drawInRect:NSMakeRect(5.0, spectrumY, DtBlkVst3::SpectrumPixelCount, SpectrumHeights[index])
+                      fromRect:NSZeroRect
+                     operation:NSCompositingOperationCopy
+                      fraction:1.0
+                respectFlipped:YES
+                         hints:nil];
         }
-        DrawOutlinedText(index == 0 ? @"Input L+R" : @"Output L+R",
-                         NSMakeRect(285.0, spectrumY + 2.0, 115.0, 13.0), 9.0);
+        DrawOutlinedText(
+            index == 0 ? @"Input L+R" : @"Output L+R", NSMakeRect(285.0, spectrumY + 2.0, 115.0, 13.0), 9.0);
         spectrumY += SpectrumHeights[index] + 3.0;
     }
 
     const NSRect source = NSMakeRect(0, _effectImage.size.height - EffectHeight, EditorWidth, EffectHeight);
     for(int row = 0; row < BlkFxParam::NUM_FX_SETS; ++row)
     {
-        NSRect destination = NSMakeRect(0, GlobalHeight + SpectrumHeight + row * EffectHeight,
-                                       EditorWidth, EffectHeight);
+        NSRect destination
+            = NSMakeRect(0, GlobalHeight + SpectrumHeight + row * EffectHeight, EditorWidth, EffectHeight);
         [_effectImage drawInRect:destination fromRect:source operation:NSCompositingOperationSourceOver fraction:1.0];
     }
 
@@ -228,7 +235,8 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         if(column == 0)
             text = ParameterText(BlkFxParam::MIX_BACK, _controller->getParamNormalized(BlkFxParam::MIX_BACK));
         else if(column == 1)
-            text = BlkFxParam::getPwrMatch(_controller->getParamNormalized(BlkFxParam::MIX_BACK)) ? @"match" : @"filter";
+            text
+                = BlkFxParam::getPwrMatch(_controller->getParamNormalized(BlkFxParam::MIX_BACK)) ? @"match" : @"filter";
         else if(column == 2)
             text = ParameterText(BlkFxParam::DELAY, _controller->getParamNormalized(BlkFxParam::DELAY));
         else if(column == 3)
@@ -240,7 +248,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         DrawOutlinedText(text, NSMakeRect(column * globalColumn, 12, globalColumn, 14), 9.0);
     }
 
-    const CGFloat effectWidths[] = {82.0, 82.0, 49.0, 98.0, 99.0};
+    const CGFloat effectWidths[] = { 82.0, 82.0, 49.0, 98.0, 99.0 };
     for(int row = 0; row < BlkFxParam::NUM_FX_SETS; ++row)
     {
         CGFloat x = 0.0;
@@ -248,9 +256,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         {
             const Steinberg::Vst::ParamID id = BlkFxParam::paramOffs(row) + column;
             DrawOutlinedText(ParameterText(id, _controller->getParamNormalized(id)),
-                             NSMakeRect(x, GlobalHeight + SpectrumHeight + row * EffectHeight + 5,
-                                        effectWidths[column], 15),
-                             10.0);
+                NSMakeRect(x, GlobalHeight + SpectrumHeight + row * EffectHeight + 5, effectWidths[column], 15), 10.0);
             x += effectWidths[column];
         }
     }
@@ -261,14 +267,14 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
     if(!frame)
         return;
     const std::array<float, DtBlkVst3::SpectrumPixelCount>* powers[] = {
-        &frame->inputPower, &frame->outputPower,
+        &frame->inputPower,
+        &frame->outputPower,
     };
     for(int index = 0; index < 2; ++index)
     {
         const NSInteger rowBytes = _spectrumBitmap[index].bytesPerRow;
         unsigned char* pixels = _spectrumBitmap[index].bitmapData;
-        std::memmove(pixels, pixels + rowBytes,
-                     static_cast<std::size_t>(rowBytes) * (SpectrumHeights[index] - 1));
+        std::memmove(pixels, pixels + rowBytes, static_cast<std::size_t>(rowBytes) * (SpectrumHeights[index] - 1));
         unsigned char* destination = pixels + rowBytes * (SpectrumHeights[index] - 1);
         for(std::size_t pixel = 0; pixel < DtBlkVst3::SpectrumPixelCount; ++pixel)
         {
@@ -289,9 +295,8 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
     {
         const CGFloat width = EditorWidth / 6.0;
         const int column = std::clamp(static_cast<int>(point.x / width), 0, 5);
-        const Steinberg::Vst::ParamID ids[] = {BlkFxParam::MIX_BACK, BlkFxParam::MIX_BACK,
-                                              BlkFxParam::DELAY, BlkFxParam::OVERLAP,
-                                              BlkFxParam::OVERLAP, BlkFxParam::FFT_LEN};
+        const Steinberg::Vst::ParamID ids[] = { BlkFxParam::MIX_BACK, BlkFxParam::MIX_BACK, BlkFxParam::DELAY,
+            BlkFxParam::OVERLAP, BlkFxParam::OVERLAP, BlkFxParam::FFT_LEN };
         *id = ids[column];
         *rect = NSMakeRect(column * width, 0, width, GlobalHeight);
         return YES;
@@ -301,9 +306,9 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
     if(point.y < effectsTop || point.y >= EditorHeight)
         return NO;
 
-    const int row = std::clamp(static_cast<int>((point.y - effectsTop) / EffectHeight), 0,
-                               static_cast<int>(BlkFxParam::NUM_FX_SETS) - 1);
-    const CGFloat widths[] = {82.0, 82.0, 49.0, 98.0, 99.0};
+    const int row = std::clamp(
+        static_cast<int>((point.y - effectsTop) / EffectHeight), 0, static_cast<int>(BlkFxParam::NUM_FX_SETS) - 1);
+    const CGFloat widths[] = { 82.0, 82.0, 49.0, 98.0, 99.0 };
     CGFloat x = 0.0;
     for(int column = 0; column < BlkFxParam::NUM_FX_PARAMS; ++column)
     {
@@ -327,8 +332,8 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         if(!effect || std::strcmp(effect->name(), "DoNotUse") == 0)
             continue;
         NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:effect->name()]
-                                                     action:@selector(selectEffect:)
-                                              keyEquivalent:@""];
+                                                      action:@selector(selectEffect:)
+                                               keyEquivalent:@""];
         item.target = self;
         item.tag = index;
         item.representedObject = @(id);
@@ -384,8 +389,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         {
             const double current = _controller->getParamNormalized(BlkFxParam::MIX_BACK);
             _controller->editParameter(BlkFxParam::MIX_BACK,
-                                       BlkFxParam::getMixbackParam(BlkFxParam::getMixBackFrac(current),
-                                                                  !BlkFxParam::getPwrMatch(current)));
+                BlkFxParam::getMixbackParam(BlkFxParam::getMixBackFrac(current), !BlkFxParam::getPwrMatch(current)));
             _dragParameter = Steinberg::Vst::kNoParamId;
             return;
         }
@@ -393,8 +397,7 @@ void DrawOutlinedText(NSString* text, NSRect rect, CGFloat size)
         {
             const double current = _controller->getParamNormalized(BlkFxParam::OVERLAP);
             _controller->editParameter(BlkFxParam::OVERLAP,
-                                       BlkFxParam::getOverlapParam(BlkFxParam::getOverlapPart(current),
-                                                                  !BlkFxParam::getBlkSync(current)));
+                BlkFxParam::getOverlapParam(BlkFxParam::getOverlapPart(current), !BlkFxParam::getBlkSync(current)));
             _dragParameter = Steinberg::Vst::kNoParamId;
             return;
         }
@@ -428,8 +431,8 @@ namespace DtBlkVst3
 EditorView::EditorView(Controller* controllerValue)
     : controller(controllerValue)
 {
-    rect = Steinberg::ViewRect(0, 0, static_cast<Steinberg::int32>(EditorWidth),
-                               static_cast<Steinberg::int32>(EditorHeight));
+    rect = Steinberg::ViewRect(
+        0, 0, static_cast<Steinberg::int32>(EditorWidth), static_cast<Steinberg::int32>(EditorHeight));
     controller->addEditor(this);
 }
 
@@ -442,9 +445,8 @@ EditorView::~EditorView()
 
 Steinberg::tresult PLUGIN_API EditorView::isPlatformTypeSupported(Steinberg::FIDString type)
 {
-    return type && std::strcmp(type, Steinberg::kPlatformTypeNSView) == 0
-        ? Steinberg::kResultTrue
-        : Steinberg::kResultFalse;
+    return type && std::strcmp(type, Steinberg::kPlatformTypeNSView) == 0 ? Steinberg::kResultTrue
+                                                                          : Steinberg::kResultFalse;
 }
 
 Steinberg::tresult PLUGIN_API EditorView::attached(void* parent, Steinberg::FIDString type)
@@ -453,9 +455,8 @@ Steinberg::tresult PLUGIN_API EditorView::attached(void* parent, Steinberg::FIDS
         return Steinberg::kInvalidArgument;
     systemWindow = parent;
     NSView* parentView = (__bridge NSView*)parent;
-    DtBlkEditorNSView* view = [[DtBlkEditorNSView alloc]
-        initWithFrame:NSMakeRect(0, 0, EditorWidth, EditorHeight)
-        controller:controller];
+    DtBlkEditorNSView* view = [[DtBlkEditorNSView alloc] initWithFrame:NSMakeRect(0, 0, EditorWidth, EditorHeight)
+                                                            controller:controller];
     [parentView addSubview:view];
     nativeView = (__bridge void*)view;
     return Steinberg::kResultTrue;
@@ -475,8 +476,8 @@ Steinberg::tresult PLUGIN_API EditorView::removed()
 
 Steinberg::tresult PLUGIN_API EditorView::onSize(Steinberg::ViewRect* size)
 {
-    if(!size || size->getWidth() != static_cast<Steinberg::int32>(EditorWidth) ||
-       size->getHeight() != static_cast<Steinberg::int32>(EditorHeight))
+    if(!size || size->getWidth() != static_cast<Steinberg::int32>(EditorWidth)
+        || size->getHeight() != static_cast<Steinberg::int32>(EditorHeight))
         return Steinberg::kResultFalse;
     rect = *size;
     if(nativeView)

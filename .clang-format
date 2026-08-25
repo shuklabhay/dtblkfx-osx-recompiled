@@ -1,0 +1,16 @@
+---
+BasedOnStyle: WebKit
+Standard: c++20
+BreakBeforeBraces: Allman
+ColumnLimit: 120
+IndentWidth: 4
+ContinuationIndentWidth: 4
+SpaceBeforeParens: Never
+SortIncludes: Never
+IncludeBlocks: Preserve
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+...

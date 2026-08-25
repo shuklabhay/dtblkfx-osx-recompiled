@@ -19,15 +19,15 @@ enum VstPlugCategory
 struct VstTimeInfo
 {
     double samplePos {};
-    double sampleRate {44100.0};
+    double sampleRate { 44100.0 };
     double nanoSeconds {};
     double ppqPos {};
-    double tempo {120.0};
+    double tempo { 120.0 };
     double barStartPos {};
     double cycleStartPos {};
     double cycleEndPos {};
-    VstInt32 timeSigNumerator {4};
-    VstInt32 timeSigDenominator {4};
+    VstInt32 timeSigNumerator { 4 };
+    VstInt32 timeSigDenominator { 4 };
     VstInt32 smpteOffset {};
     VstInt32 smpteFrameRate {};
     VstInt32 samplesToNextClock {};
@@ -38,7 +38,8 @@ class LegacyPluginBase
 {
 public:
     LegacyPluginBase(VstInt32 programCount, VstInt32 parameterCount)
-        : numPrograms(programCount), numParams(parameterCount)
+        : numPrograms(programCount)
+        , numParams(parameterCount)
     {
     }
 
@@ -46,18 +47,12 @@ public:
     virtual void setParameter(VstInt32 index, float value) = 0;
     virtual float getParameter(VstInt32 index) = 0;
 
-    virtual void setProgram(VstInt32 program)
-    {
-        curProgram = program;
-    }
+    virtual void setProgram(VstInt32 program) { curProgram = program; }
 
-    virtual void resume() {}
-    virtual void suspend() {}
+    virtual void resume() { }
+    virtual void suspend() { }
 
-    virtual void setBlockSize(VstInt32 samples)
-    {
-        blockSize = samples;
-    }
+    virtual void setBlockSize(VstInt32 samples) { blockSize = samples; }
 
     void setSampleRate(float rate)
     {
@@ -65,10 +60,7 @@ public:
         timeInfo.sampleRate = rate;
     }
 
-    float getSampleRate() const
-    {
-        return sampleRate;
-    }
+    float getSampleRate() const { return sampleRate; }
 
     void setTimeInfo(double tempo, double ppqPosition, bool tempoValid, bool ppqValid)
     {
@@ -78,20 +70,14 @@ public:
         hasTimeInfo = timeInfo.flags != 0;
     }
 
-    VstTimeInfo* getTimeInfo(VstInt32)
-    {
-        return hasTimeInfo ? &timeInfo : nullptr;
-    }
+    VstTimeInfo* getTimeInfo(VstInt32) { return hasTimeInfo ? &timeInfo : nullptr; }
 
-    void setParameterAutomated(VstInt32 index, float value)
-    {
-        setParameter(index, value);
-    }
+    void setParameterAutomated(VstInt32 index, float value) { setParameter(index, value); }
 
-    void setNumInputs(VstInt32) {}
-    void setNumOutputs(VstInt32) {}
-    void canProcessReplacing(bool) {}
-    void programsAreChunks(bool) {}
+    void setNumInputs(VstInt32) { }
+    void setNumOutputs(VstInt32) { }
+    void canProcessReplacing(bool) { }
+    void programsAreChunks(bool) { }
     void setInitialDelay(VstInt32 delay) { initialDelay = delay; }
     void setUniqueID(VstInt32 id) { uniqueId = id; }
 
@@ -101,7 +87,7 @@ public:
     VstInt32 blockSize {};
     VstInt32 initialDelay {};
     VstInt32 uniqueId {};
-    float sampleRate {44100.0f};
+    float sampleRate { 44100.0f };
 
 private:
     VstTimeInfo timeInfo {};

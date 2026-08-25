@@ -97,11 +97,11 @@ constexpr int NoEffectType = 9;
 struct Scenario
 {
     std::string name;
-    std::array<double, 44> parameters{};
-    VstInt32 renderSamples{RenderSamples};
+    std::array<double, 44> parameters {};
+    VstInt32 renderSamples { RenderSamples };
 };
 
-VstTimeInfo timeInfo{};
+VstTimeInfo timeInfo {};
 
 VstIntPtr __cdecl Host(AEffect*, VstInt32 opcode, VstInt32, VstIntPtr, void*, float)
 {
@@ -131,20 +131,11 @@ float InputSample(std::uint64_t position, int channel)
     return channel == 0 ? sample : sample * 0.73f;
 }
 
-double EffectTypeValue(int effect)
-{
-    return static_cast<double>(effect * 8 + 4) / 255.0;
-}
+double EffectTypeValue(int effect) { return static_cast<double>(effect * 8 + 4) / 255.0; }
 
-double FftPlanValue(int plan)
-{
-    return std::clamp(static_cast<double>(plan + 2) * 4.0 / 255.0, 0.0, 1.0);
-}
+double FftPlanValue(int plan) { return std::clamp(static_cast<double>(plan + 2) * 4.0 / 255.0, 0.0, 1.0); }
 
-int EffectParameter(int set, int parameter)
-{
-    return GlobalParameterCount + set * EffectParameterCount + parameter;
-}
+int EffectParameter(int set, int parameter) { return GlobalParameterCount + set * EffectParameterCount + parameter; }
 
 Scenario BaseScenario(std::string name)
 {
@@ -171,10 +162,7 @@ void SetEffect(Scenario& scenario, int set, int effect, double value = 0.5)
     scenario.parameters[EffectParameter(set, 4)] = value;
 }
 
-double MillisecondsDelayValue(double milliseconds)
-{
-    return 0.5 + milliseconds / 12000.0;
-}
+double MillisecondsDelayValue(double milliseconds) { return 0.5 + milliseconds / 12000.0; }
 
 std::vector<Scenario> MakeScenarios()
 {
@@ -192,7 +180,7 @@ std::vector<Scenario> MakeScenarios()
             SetEffect(scenario, set, (chain * 5 + set * 3) % 31, 0.13 + 0.1 * set);
         scenarios.push_back(std::move(scenario));
     }
-    constexpr std::array<int, EffectSetCount> chainFourEffects{20, 23, 26, 29, 1, 4, 7, 10};
+    constexpr std::array<int, EffectSetCount> chainFourEffects { 20, 23, 26, 29, 1, 4, 7, 10 };
     for(int prefix = 1; prefix <= EffectSetCount; ++prefix)
     {
         Scenario scenario = BaseScenario("chain-4-prefix-" + std::to_string(prefix));
@@ -200,7 +188,7 @@ std::vector<Scenario> MakeScenarios()
             SetEffect(scenario, set, chainFourEffects[set], 0.13 + 0.1 * set);
         scenarios.push_back(std::move(scenario));
     }
-    for(int plan : {0, 8, 16, 24, 32})
+    for(int plan : { 0, 8, 16, 24, 32 })
     {
         Scenario scenario = BaseScenario("fft-plan-" + std::to_string(plan));
         scenario.parameters[2] = FftPlanValue(plan);
@@ -208,7 +196,7 @@ std::vector<Scenario> MakeScenarios()
         SetEffect(scenario, 1, 7, 0.31);
         scenarios.push_back(std::move(scenario));
     }
-    constexpr std::array<double, 5> overlaps{0.05, 0.35, 0.49, 0.65, 0.85};
+    constexpr std::array<double, 5> overlaps { 0.05, 0.35, 0.49, 0.65, 0.85 };
     for(int overlapIndex = 0; overlapIndex < 5; ++overlapIndex)
     {
         Scenario scenario = BaseScenario("overlap-" + std::to_string(overlapIndex));
@@ -217,8 +205,7 @@ std::vector<Scenario> MakeScenarios()
         SetEffect(scenario, 1, 20, 0.42);
         scenarios.push_back(std::move(scenario));
     }
-    constexpr std::array<double, 4> delays{0.0, 16.0 / 255.0, 0.5 + 50.0 / 12000.0,
-                                           0.5 + 500.0 / 12000.0};
+    constexpr std::array<double, 4> delays { 0.0, 16.0 / 255.0, 0.5 + 50.0 / 12000.0, 0.5 + 500.0 / 12000.0 };
     for(int delayIndex = 0; delayIndex < 4; ++delayIndex)
     {
         Scenario scenario = BaseScenario("delay-" + std::to_string(delayIndex));
@@ -262,24 +249,25 @@ int main(int argc, char** argv)
     effect->dispatcher(effect, effSetSampleRate, 0, 0, nullptr, static_cast<float>(SampleRate));
     effect->dispatcher(effect, effSetBlockSize, 0, BlockSize, nullptr, 0.0f);
 
-    char effectName[64]{};
-    char vendor[64]{};
-    char product[64]{};
+    char effectName[64] {};
+    char vendor[64] {};
+    char product[64] {};
     effect->dispatcher(effect, effGetEffectName, 0, 0, effectName, 0.0f);
     effect->dispatcher(effect, effGetVendorString, 0, 0, vendor, 0.0f);
     effect->dispatcher(effect, effGetProductString, 0, 0, product, 0.0f);
-    std::printf("name=%s vendor=%s product=%s programs=%d params=%d inputs=%d outputs=%d initialDelay=%d version=%d vst=%lld vendorVersion=%lld\n",
-                effectName, vendor, product, effect->numPrograms, effect->numParams, effect->numInputs,
-                effect->numOutputs, effect->initialDelay, effect->version,
-                static_cast<long long>(effect->dispatcher(effect, effGetVstVersion, 0, 0, nullptr, 0.0f)),
-                static_cast<long long>(effect->dispatcher(effect, effGetVendorVersion, 0, 0, nullptr, 0.0f)));
+    std::printf("name=%s vendor=%s product=%s programs=%d params=%d inputs=%d outputs=%d initialDelay=%d version=%d "
+                "vst=%lld vendorVersion=%lld\n",
+        effectName, vendor, product, effect->numPrograms, effect->numParams, effect->numInputs, effect->numOutputs,
+        effect->initialDelay, effect->version,
+        static_cast<long long>(effect->dispatcher(effect, effGetVstVersion, 0, 0, nullptr, 0.0f)),
+        static_cast<long long>(effect->dispatcher(effect, effGetVendorVersion, 0, 0, nullptr, 0.0f)));
 
-    std::array<float, BlockSize> inLeft{};
-    std::array<float, BlockSize> inRight{};
-    std::array<float, BlockSize> outLeft{};
-    std::array<float, BlockSize> outRight{};
-    float* inputs[] = {inLeft.data(), inRight.data()};
-    float* outputs[] = {outLeft.data(), outRight.data()};
+    std::array<float, BlockSize> inLeft {};
+    std::array<float, BlockSize> inRight {};
+    std::array<float, BlockSize> outLeft {};
+    std::array<float, BlockSize> outRight {};
+    float* inputs[] = { inLeft.data(), inRight.data() };
+    float* outputs[] = { outLeft.data(), outRight.data() };
     for(const Scenario& scenario : scenarios)
     {
         for(int index = 0; index < effect->numParams; ++index)
@@ -305,7 +293,7 @@ int main(int argc, char** argv)
             effect->processReplacing(effect, inputs, outputs, BlockSize);
             for(VstInt32 sample = 0; sample < BlockSize; ++sample)
             {
-                float pair[] = {outLeft[sample], outRight[sample]};
+                float pair[] = { outLeft[sample], outRight[sample] };
                 std::fwrite(pair, sizeof(float), 2, output);
                 if(firstOutput < 0 && (pair[0] != 0.0f || pair[1] != 0.0f))
                     firstOutput = position + sample;

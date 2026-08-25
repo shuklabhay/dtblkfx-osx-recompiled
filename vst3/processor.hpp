@@ -27,9 +27,8 @@ public:
     Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs,
-                                                     Steinberg::int32 inputCount,
-                                                     Steinberg::Vst::SpeakerArrangement* outputs,
-                                                     Steinberg::int32 outputCount) SMTG_OVERRIDE;
+        Steinberg::int32 inputCount, Steinberg::Vst::SpeakerArrangement* outputs,
+        Steinberg::int32 outputCount) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setActive(Steinberg::TBool state) SMTG_OVERRIDE;
@@ -57,11 +56,11 @@ private:
     std::array<int, SpectrumPixelCount> spectrumEndBins {};
     std::array<std::vector<float>, 2> bypassDry;
     std::vector<ParameterEvent> parameterEvents;
-    std::atomic_bool spectrumEnabled {false};
-    std::atomic_bool spectrumResetRequested {true};
-    int spectrumPlan {-1};
+    std::atomic_bool spectrumEnabled { false };
+    std::atomic_bool spectrumResetRequested { true };
+    int spectrumPlan { -1 };
     float spectrumSampleRate {};
-    bool spectrumLineEmpty {true};
+    bool spectrumLineEmpty { true };
     std::int64_t previousSpectrumSamplePosition {};
     bool bypass {};
 };

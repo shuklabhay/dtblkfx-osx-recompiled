@@ -18,34 +18,34 @@ namespace DtBlkVst3
 {
 namespace
 {
-constexpr std::int64_t MinimumSpectrumSamplesPerLine = 600;
+    constexpr std::int64_t MinimumSpectrumSamplesPerLine = 600;
 
-void UpdateSilenceFlags(Steinberg::Vst::ProcessData& data)
-{
-    if(data.numOutputs < 1 || data.numSamples <= 0 || !data.outputs[0].channelBuffers32)
-        return;
-
-    Steinberg::uint64 silenceFlags = 0;
-    for(Steinberg::int32 channel = 0; channel < data.outputs[0].numChannels; ++channel)
+    void UpdateSilenceFlags(Steinberg::Vst::ProcessData& data)
     {
-        const float* samples = data.outputs[0].channelBuffers32[channel];
-        bool silent = samples != nullptr;
-        for(Steinberg::int32 sample = 0; silent && sample < data.numSamples; ++sample)
-            silent = samples[sample] == 0.0f;
-        if(silent)
-            silenceFlags |= Steinberg::uint64 {1} << channel;
+        if(data.numOutputs < 1 || data.numSamples <= 0 || !data.outputs[0].channelBuffers32)
+            return;
+
+        Steinberg::uint64 silenceFlags = 0;
+        for(Steinberg::int32 channel = 0; channel < data.outputs[0].numChannels; ++channel)
+        {
+            const float* samples = data.outputs[0].channelBuffers32[channel];
+            bool silent = samples != nullptr;
+            for(Steinberg::int32 sample = 0; silent && sample < data.numSamples; ++sample)
+                silent = samples[sample] == 0.0f;
+            if(silent)
+                silenceFlags |= Steinberg::uint64 { 1 } << channel;
+        }
+        data.outputs[0].silenceFlags = silenceFlags;
     }
-    data.outputs[0].silenceFlags = silenceFlags;
-}
 }
 
 Processor::Processor()
 {
     setControllerClass(Steinberg::FUID::fromTUID(ControllerUID));
     processContextRequirements.needTempo().needProjectTimeMusic();
-    spectrumExchange = std::make_unique<Steinberg::Vst::DataExchangeHandler>(
-        this, [](Steinberg::Vst::DataExchangeHandler::Config& config,
-                 const Steinberg::Vst::ProcessSetup&) {
+    spectrumExchange = std::make_unique<Steinberg::Vst::DataExchangeHandler>(this,
+        [](Steinberg::Vst::DataExchangeHandler::Config& config, const Steinberg::Vst::ProcessSetup&)
+        {
             config.blockSize = sizeof(SpectrumFrame);
             config.numBlocks = 32;
             config.alignment = 32;
@@ -73,9 +73,8 @@ Steinberg::tresult PLUGIN_API Processor::initialize(Steinberg::FUnknown* context
         engine = std::make_unique<DtBlkFx>();
         for(std::size_t index = 0; index < LegacyParameterCount; ++index)
             engine->setParameter(static_cast<VstInt32>(index), LegacyDefaultParameter(index));
-        engine->setSpectrumCallback(this, [](void* context, DtBlkFx&, int stage) {
-            static_cast<Processor*>(context)->captureSpectrum(stage);
-        });
+        engine->setSpectrumCallback(
+            this, [](void* context, DtBlkFx&, int stage) { static_cast<Processor*>(context)->captureSpectrum(stage); });
     }
     catch(...)
     {
@@ -122,12 +121,10 @@ Steinberg::tresult PLUGIN_API Processor::notify(Steinberg::Vst::IMessage* messag
 }
 
 Steinberg::tresult PLUGIN_API Processor::setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs,
-                                                             Steinberg::int32 inputCount,
-                                                             Steinberg::Vst::SpeakerArrangement* outputs,
-                                                             Steinberg::int32 outputCount)
+    Steinberg::int32 inputCount, Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 outputCount)
 {
-    if(inputCount != 1 || outputCount != 1 || inputs[0] != Steinberg::Vst::SpeakerArr::kStereo ||
-       outputs[0] != Steinberg::Vst::SpeakerArr::kStereo)
+    if(inputCount != 1 || outputCount != 1 || inputs[0] != Steinberg::Vst::SpeakerArr::kStereo
+        || outputs[0] != Steinberg::Vst::SpeakerArr::kStereo)
         return Steinberg::kResultFalse;
     return AudioEffect::setBusArrangements(inputs, inputCount, outputs, outputCount);
 }
@@ -139,8 +136,8 @@ Steinberg::tresult PLUGIN_API Processor::canProcessSampleSize(Steinberg::int32 s
 
 Steinberg::tresult PLUGIN_API Processor::setupProcessing(Steinberg::Vst::ProcessSetup& setup)
 {
-    if(!engine || setup.sampleRate <= 0.0 || setup.maxSamplesPerBlock <= 0 ||
-       setup.symbolicSampleSize != Steinberg::Vst::kSample32)
+    if(!engine || setup.sampleRate <= 0.0 || setup.maxSamplesPerBlock <= 0
+        || setup.symbolicSampleSize != Steinberg::Vst::kSample32)
         return Steinberg::kResultFalse;
 
     const Steinberg::tresult result = AudioEffect::setupProcessing(setup);
@@ -208,11 +205,10 @@ void Processor::updateTiming(const Steinberg::Vst::ProcessContext* context, Stei
     engine->setTimeInfo(tempo, ppq, tempoValid, ppqValid);
 }
 
-void Processor::processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int32 offset,
-                               Steinberg::int32 sampleCount)
+void Processor::processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int32 offset, Steinberg::int32 sampleCount)
 {
-    if(sampleCount <= 0 || data.numInputs < 1 || data.numOutputs < 1 ||
-       data.inputs[0].numChannels < 2 || data.outputs[0].numChannels < 2)
+    if(sampleCount <= 0 || data.numInputs < 1 || data.numOutputs < 1 || data.inputs[0].numChannels < 2
+        || data.outputs[0].numChannels < 2)
         return;
 
     std::array<float*, 2> inputs {
@@ -231,12 +227,10 @@ void Processor::processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int
             bypassDry[1].data(),
         };
         for(std::size_t channel = 0; channel < outputs.size(); ++channel)
-            std::memcpy(dryInputs[channel], inputs[channel],
-                        static_cast<std::size_t>(sampleCount) * sizeof(float));
+            std::memcpy(dryInputs[channel], inputs[channel], static_cast<std::size_t>(sampleCount) * sizeof(float));
         engine->processReplacing(inputs.data(), outputs.data(), sampleCount);
         for(std::size_t channel = 0; channel < outputs.size(); ++channel)
-            std::memcpy(outputs[channel], dryInputs[channel],
-                        static_cast<std::size_t>(sampleCount) * sizeof(float));
+            std::memcpy(outputs[channel], dryInputs[channel], static_cast<std::size_t>(sampleCount) * sizeof(float));
         return;
     }
 
@@ -252,9 +246,8 @@ void Processor::resetSpectrumLine()
 
 void Processor::captureSpectrum(int stage)
 {
-    if(!spectrumEnabled.load(std::memory_order_relaxed) || !engine || stage < 0 || stage > 1 ||
-       engine->_plan < 0 || engine->_plan >= NUM_FFT_SZ ||
-       engine->getSampleRate() <= 0.0f)
+    if(!spectrumEnabled.load(std::memory_order_relaxed) || !engine || stage < 0 || stage > 1 || engine->_plan < 0
+        || engine->_plan >= NUM_FFT_SZ || engine->getSampleRate() <= 0.0f)
         return;
     if(spectrumResetRequested.exchange(false, std::memory_order_relaxed))
     {
@@ -269,8 +262,8 @@ void Processor::captureSpectrum(int stage)
     const int maximumBin = fftLength / 2;
     if(spectrumPlan != engine->_plan || spectrumSampleRate != engine->getSampleRate())
     {
-        const float halfPixel = std::pow(2.0f, -0.5f * BlkFxParam::octaveSpan() /
-                                                  static_cast<float>(SpectrumPixelCount));
+        const float halfPixel
+            = std::pow(2.0f, -0.5f * BlkFxParam::octaveSpan() / static_cast<float>(SpectrumPixelCount));
         const float hzToBin = halfPixel * static_cast<float>(fftLength) / engine->getSampleRate();
         int cachedStartBin = 0;
         for(std::size_t pixel = 0; pixel < SpectrumPixelCount; ++pixel)
@@ -278,10 +271,8 @@ void Processor::captureSpectrum(int stage)
             int endBin = maximumBin + 1;
             if(pixel + 1 < SpectrumPixelCount)
             {
-                const float parameter = static_cast<float>(pixel + 1) /
-                                        static_cast<float>(SpectrumPixelCount);
-                endBin = std::clamp(RndToInt(BlkFxParam::getHz(parameter) * hzToBin),
-                                    cachedStartBin, maximumBin);
+                const float parameter = static_cast<float>(pixel + 1) / static_cast<float>(SpectrumPixelCount);
+                endBin = std::clamp(RndToInt(BlkFxParam::getHz(parameter) * hzToBin), cachedStartBin, maximumBin);
             }
             spectrumEndBins[pixel] = endBin;
             cachedStartBin = endBin;
@@ -316,8 +307,7 @@ void Processor::captureSpectrum(int stage)
     if(spectrumExchange)
     {
         Steinberg::Vst::DataExchangeBlock block = spectrumExchange->getCurrentOrNewBlock();
-        if(block.blockID != Steinberg::Vst::InvalidDataExchangeBlockID &&
-           block.size >= sizeof(SpectrumFrame))
+        if(block.blockID != Steinberg::Vst::InvalidDataExchangeBlockID && block.size >= sizeof(SpectrumFrame))
         {
             std::memcpy(block.data, &spectrumFrame, sizeof(SpectrumFrame));
             spectrumExchange->sendCurrentBlock();
@@ -359,11 +349,12 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
     }
 
     std::stable_sort(parameterEvents.begin(), parameterEvents.end(),
-                     [](const ParameterEvent& left, const ParameterEvent& right) {
-        if(left.offset != right.offset)
-            return left.offset < right.offset;
-        return left.id == ProgramParameterId && right.id != ProgramParameterId;
-    });
+        [](const ParameterEvent& left, const ParameterEvent& right)
+        {
+            if(left.offset != right.offset)
+                return left.offset < right.offset;
+            return left.id == ProgramParameterId && right.id != ProgramParameterId;
+        });
 
     updateTiming(data.processContext, 0);
     Steinberg::int32 cursor = 0;
@@ -379,8 +370,8 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
             if(event.id == BypassParameterId)
                 bypass = event.value > 0.5;
             else if(event.id == ProgramParameterId && LegacyPresetCount() > 0)
-                engine->setProgram(static_cast<VstInt32>(std::lround(
-                    event.value * static_cast<double>(LegacyPresetCount() - 1))));
+                engine->setProgram(
+                    static_cast<VstInt32>(std::lround(event.value * static_cast<double>(LegacyPresetCount() - 1))));
             else
                 engine->setParameter(static_cast<VstInt32>(event.id), static_cast<float>(event.value));
         }
@@ -397,8 +388,8 @@ Steinberg::tresult PLUGIN_API Processor::setState(Steinberg::IBStream* stream)
     if(!engine)
         return Steinberg::kResultFalse;
     StateData state;
-    if(!ReadState(stream, state) || state.legacyChunk.empty() ||
-       engine->setChunk(state.legacyChunk.data(), static_cast<VstInt32>(state.legacyChunk.size()), false) == 0)
+    if(!ReadState(stream, state) || state.legacyChunk.empty()
+        || engine->setChunk(state.legacyChunk.data(), static_cast<VstInt32>(state.legacyChunk.size()), false) == 0)
         return Steinberg::kResultFalse;
     bypass = state.bypass;
     return Steinberg::kResultOk;

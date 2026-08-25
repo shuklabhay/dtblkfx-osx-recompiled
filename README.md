@@ -1,4 +1,4 @@
-# dtblk-osx-recompiled
+# dtblkfx-osx-recompiled
 
 An unofficial universal macOS VST3 continuation of Darrell Tam's DtBlkFx 1.1.
 It preserves the original FFT effect engine, parameters, factory presets, art,
@@ -10,11 +10,6 @@ expose the original 44 controls and 43 factory presets, display live
 input/output spectrograms, support artifact-free host bypass and state recall,
 and default new instances to zero user delay. The FFT still has the algorithmic
 look-ahead inherent to block processing.
-
-Ableton Live does not show VST3 program lists in its device-level preset field.
-The repository therefore ships both standard `.vstpreset` files and a separate
-Ableton `.adv` pack under [`preset-packs`](preset-packs/README.md). Neither pack
-is installed by the build.
 
 ## Status
 

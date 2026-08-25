@@ -57,13 +57,11 @@ std::string FileName(Steinberg::int32 index, const std::string& name)
     return output.str();
 }
 
-bool SelectProgram(Steinberg::Vst::IEditController* controller,
-                   Steinberg::Vst::IAudioProcessor* processor,
-                   Steinberg::int32 index)
+bool SelectProgram(
+    Steinberg::Vst::IEditController* controller, Steinberg::Vst::IAudioProcessor* processor, Steinberg::int32 index)
 {
     const double normalized = static_cast<double>(index) / static_cast<double>(PresetCount - 1);
-    if(controller->setParamNormalized(DtBlkVst3::ProgramParameterId, normalized) !=
-       Steinberg::kResultOk)
+    if(controller->setParamNormalized(DtBlkVst3::ProgramParameterId, normalized) != Steinberg::kResultOk)
         return false;
 
     Steinberg::Vst::ParameterChanges changes(1);
@@ -112,8 +110,8 @@ int main(int argc, const char* argv[])
             break;
         }
     }
-    if(!Check(provider != nullptr, "audio-effect class not found") ||
-       !Check(provider->initialize(), "plug-in initialization failed"))
+    if(!Check(provider != nullptr, "audio-effect class not found")
+        || !Check(provider->initialize(), "plug-in initialization failed"))
         return 1;
 
     auto component = provider->getComponentPtr();
@@ -123,12 +121,11 @@ int main(int argc, const char* argv[])
     Steinberg::FUID componentUid;
     Steinberg::Vst::ProgramListInfo listInfo {};
     if(!Check(component != nullptr && controller != nullptr && processor != nullptr && unitInfo != nullptr,
-              "required plug-in interfaces unavailable") ||
-       !Check(provider->getComponentUID(componentUid) == Steinberg::kResultTrue,
-              "component identifier unavailable") ||
-       !Check(unitInfo->getProgramListInfo(0, listInfo) == Steinberg::kResultTrue &&
-                  listInfo.programCount == PresetCount,
-              "factory program list is incomplete"))
+           "required plug-in interfaces unavailable")
+        || !Check(provider->getComponentUID(componentUid) == Steinberg::kResultTrue, "component identifier unavailable")
+        || !Check(
+            unitInfo->getProgramListInfo(0, listInfo) == Steinberg::kResultTrue && listInfo.programCount == PresetCount,
+            "factory program list is incomplete"))
         return 1;
 
     Steinberg::Vst::SpeakerArrangement inputArrangement = Steinberg::Vst::SpeakerArr::kStereo;
@@ -138,74 +135,60 @@ int main(int argc, const char* argv[])
     setup.symbolicSampleSize = Steinberg::Vst::kSample32;
     setup.maxSamplesPerBlock = 512;
     setup.sampleRate = 44100.0;
-    if(!Check(processor->setBusArrangements(&inputArrangement, 1, &outputArrangement, 1) ==
-                  Steinberg::kResultOk,
-              "stereo bus configuration failed") ||
-       !Check(processor->setupProcessing(setup) == Steinberg::kResultOk,
-              "processing setup failed") ||
-       !Check(component->setActive(true) == Steinberg::kResultOk,
-              "component activation failed") ||
-       !Check(processor->setProcessing(true) == Steinberg::kResultOk,
-              "processing activation failed"))
+    if(!Check(processor->setBusArrangements(&inputArrangement, 1, &outputArrangement, 1) == Steinberg::kResultOk,
+           "stereo bus configuration failed")
+        || !Check(processor->setupProcessing(setup) == Steinberg::kResultOk, "processing setup failed")
+        || !Check(component->setActive(true) == Steinberg::kResultOk, "component activation failed")
+        || !Check(processor->setProcessing(true) == Steinberg::kResultOk, "processing activation failed"))
         return 1;
 
     for(Steinberg::int32 index = 0; index < PresetCount; ++index)
     {
         Steinberg::Vst::String128 programName {};
         if(!Check(unitInfo->getProgramName(listInfo.id, index, programName) == Steinberg::kResultTrue,
-                  "factory program name unavailable") ||
-           !Check(SelectProgram(controller, processor, index), "factory program selection failed"))
+               "factory program name unavailable")
+            || !Check(SelectProgram(controller, processor, index), "factory program selection failed"))
             return 1;
 
         std::array<double, DtBlkVst3::LegacyParameterCount> expected {};
-        for(Steinberg::Vst::ParamID parameter = 0;
-            parameter < DtBlkVst3::LegacyParameterCount; ++parameter)
+        for(Steinberg::Vst::ParamID parameter = 0; parameter < DtBlkVst3::LegacyParameterCount; ++parameter)
             expected[parameter] = controller->getParamNormalized(parameter);
         const double expectedProgram = controller->getParamNormalized(DtBlkVst3::ProgramParameterId);
 
-        if(!Check(processor->setProcessing(false) == Steinberg::kResultOk,
-                  "processing deactivation failed") ||
-           !Check(component->setActive(false) == Steinberg::kResultOk,
-                  "component deactivation failed"))
+        if(!Check(processor->setProcessing(false) == Steinberg::kResultOk, "processing deactivation failed")
+            || !Check(component->setActive(false) == Steinberg::kResultOk, "component deactivation failed"))
             return 1;
 
         const std::filesystem::path path = outputDirectory / FileName(index, ToAscii(programName));
-        Steinberg::IPtr<Steinberg::IBStream> output =
-            Steinberg::owned(Steinberg::Vst::FileStream::open(path.string().c_str(), "wb"));
-        if(!Check(output != nullptr, "could not create " + path.string()) ||
-           !Check(Steinberg::Vst::PresetFile::savePreset(
-                      output, componentUid, component, controller, nullptr, 0),
-                  "could not write " + path.string()))
+        Steinberg::IPtr<Steinberg::IBStream> output
+            = Steinberg::owned(Steinberg::Vst::FileStream::open(path.string().c_str(), "wb"));
+        if(!Check(output != nullptr, "could not create " + path.string())
+            || !Check(Steinberg::Vst::PresetFile::savePreset(output, componentUid, component, controller, nullptr, 0),
+                "could not write " + path.string()))
             return 1;
         output = nullptr;
 
-        controller->setParamNormalized(DtBlkVst3::ProgramParameterId,
-                                       index == 0 ? 1.0 : 0.0);
-        Steinberg::IPtr<Steinberg::IBStream> input =
-            Steinberg::owned(Steinberg::Vst::FileStream::open(path.string().c_str(), "rb"));
-        if(!Check(input != nullptr, "could not reopen " + path.string()) ||
-           !Check(Steinberg::Vst::PresetFile::loadPreset(
-                      input, componentUid, component, controller),
-                  "could not reload " + path.string()))
+        controller->setParamNormalized(DtBlkVst3::ProgramParameterId, index == 0 ? 1.0 : 0.0);
+        Steinberg::IPtr<Steinberg::IBStream> input
+            = Steinberg::owned(Steinberg::Vst::FileStream::open(path.string().c_str(), "rb"));
+        if(!Check(input != nullptr, "could not reopen " + path.string())
+            || !Check(Steinberg::Vst::PresetFile::loadPreset(input, componentUid, component, controller),
+                "could not reload " + path.string()))
             return 1;
 
-        for(Steinberg::Vst::ParamID parameter = 0;
-            parameter < DtBlkVst3::LegacyParameterCount; ++parameter)
+        for(Steinberg::Vst::ParamID parameter = 0; parameter < DtBlkVst3::LegacyParameterCount; ++parameter)
         {
             if(!Check(std::abs(controller->getParamNormalized(parameter) - expected[parameter]) < 1e-7,
-                      "reloaded parameter mismatch in " + path.string()))
+                   "reloaded parameter mismatch in " + path.string()))
                 return 1;
         }
-        if(!Check(std::abs(controller->getParamNormalized(DtBlkVst3::ProgramParameterId) -
-                          expectedProgram) < 1e-7,
-                  "reloaded program mismatch in " + path.string()))
+        if(!Check(std::abs(controller->getParamNormalized(DtBlkVst3::ProgramParameterId) - expectedProgram) < 1e-7,
+               "reloaded program mismatch in " + path.string()))
             return 1;
 
-        if(index + 1 < PresetCount &&
-           (!Check(component->setActive(true) == Steinberg::kResultOk,
-                   "component reactivation failed") ||
-            !Check(processor->setProcessing(true) == Steinberg::kResultOk,
-                   "processing reactivation failed")))
+        if(index + 1 < PresetCount
+            && (!Check(component->setActive(true) == Steinberg::kResultOk, "component reactivation failed")
+                || !Check(processor->setProcessing(true) == Steinberg::kResultOk, "processing reactivation failed")))
             return 1;
     }
 
