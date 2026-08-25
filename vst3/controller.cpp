@@ -188,12 +188,17 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(Steinberg::FIDString nam
 
 void Controller::addEditor(EditorView* editor)
 {
+    const bool enableSpectrum = editors.empty();
     editors.push_back(editor);
+    if(enableSpectrum)
+        sendMessageID(SpectrumEnableMessage);
 }
 
 void Controller::removeEditor(EditorView* editor)
 {
     editors.erase(std::remove(editors.begin(), editors.end(), editor), editors.end());
+    if(editors.empty())
+        sendMessageID(SpectrumDisableMessage);
 }
 
 void Controller::editParameter(Steinberg::Vst::ParamID id, Steinberg::Vst::ParamValue value)

@@ -150,4 +150,22 @@ if(APPLE)
         PROPERTIES COMPILE_FLAGS "-fobjc-arc"
     )
     smtg_target_setup_universal_binary(dtblkfx_smoke)
+
+    add_executable(dtblkfx_perf
+        tests/perf_host.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/parameterchanges.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/plugprovider.cpp
+    )
+    target_compile_features(dtblkfx_perf PRIVATE cxx_std_20)
+    target_link_libraries(dtblkfx_perf PRIVATE sdk_hosting "-framework Cocoa")
+    set_target_properties(dtblkfx_perf PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
+    set_source_files_properties(
+        tests/perf_host.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+    )
+    smtg_target_setup_universal_binary(dtblkfx_perf)
 endif()

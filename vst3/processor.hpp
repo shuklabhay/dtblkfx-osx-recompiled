@@ -6,7 +6,9 @@
 #include "spectrum.hpp"
 
 #include <array>
+#include <atomic>
 #include <memory>
+#include <vector>
 
 class DtBlkFx;
 
@@ -23,6 +25,7 @@ public:
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
+    Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs,
                                                      Steinberg::int32 inputCount,
                                                      Steinberg::Vst::SpeakerArrangement* outputs,
@@ -36,6 +39,13 @@ public:
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) SMTG_OVERRIDE;
 
 private:
+    struct ParameterEvent
+    {
+        Steinberg::int32 offset {};
+        Steinberg::Vst::ParamID id {};
+        Steinberg::Vst::ParamValue value {};
+    };
+
     void updateTiming(const Steinberg::Vst::ProcessContext* context, Steinberg::int32 sampleOffset);
     void processSegment(Steinberg::Vst::ProcessData& data, Steinberg::int32 offset, Steinberg::int32 sampleCount);
     void captureSpectrum(int stage);
@@ -44,6 +54,12 @@ private:
     std::unique_ptr<DtBlkFx> engine;
     std::unique_ptr<Steinberg::Vst::DataExchangeHandler> spectrumExchange;
     SpectrumFrame spectrumFrame;
+    std::array<int, SpectrumPixelCount> spectrumEndBins {};
+    std::vector<ParameterEvent> parameterEvents;
+    std::atomic_bool spectrumEnabled {false};
+    std::atomic_bool spectrumResetRequested {true};
+    int spectrumPlan {-1};
+    float spectrumSampleRate {};
     bool spectrumLineEmpty {true};
     std::int64_t previousSpectrumSamplePosition {};
     bool bypass {};

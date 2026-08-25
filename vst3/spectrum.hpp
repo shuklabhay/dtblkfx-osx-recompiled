@@ -8,6 +8,8 @@ namespace DtBlkVst3
 {
 constexpr std::size_t SpectrumPixelCount = 400;
 constexpr std::uint32_t SpectrumExchangeContext = 0x44544253;
+constexpr const char* SpectrumEnableMessage = "DtBlkFx.Spectrum.Enable";
+constexpr const char* SpectrumDisableMessage = "DtBlkFx.Spectrum.Disable";
 
 struct alignas(32) SpectrumFrame
 {

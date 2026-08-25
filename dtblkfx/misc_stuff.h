@@ -158,6 +158,32 @@ template <class T> struct BuiltinWrapper
     return t?true:false;
   }
 
+#elif defined(DTBLKFX_HEADLESS)
+
+  inline long InterlockedIncrement(long* v) { return __atomic_add_fetch(v, 1L, __ATOMIC_SEQ_CST); }
+  inline long InterlockedDecrement(long* v) { return __atomic_sub_fetch(v, 1L, __ATOMIC_SEQ_CST); }
+
+  inline int strnlen(const char* src, int max_n)
+  {
+    const char* s = src;
+    const char* s_end = src+max_n;
+    while(s < s_end && *s) s++;
+    return (int)(s-src);
+  }
+
+  struct CriticalSectionWrapper
+  {
+    void lock() {}
+    void unlock() {}
+    operator CriticalSectionWrapper* () { return this; }
+  };
+
+  class ScopeCriticalSection
+  {
+  public:
+    ScopeCriticalSection(CriticalSectionWrapper*) {}
+  };
+
 #else
 
   inline long InterlockedIncrement(long* v) { return __atomic_add_fetch(v, 1L, __ATOMIC_SEQ_CST); }
