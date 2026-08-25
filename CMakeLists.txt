@@ -10,6 +10,8 @@ endif()
 
 project(dtblk_osx_recompiled VERSION 1.1.1 LANGUAGES C CXX)
 
+option(DTBLKFX_BUILD_AUV2 "Build the macOS Audio Unit v2 wrapper" OFF)
+
 if(APPLE)
     enable_language(OBJCXX)
 endif()
@@ -45,6 +47,16 @@ FetchContent_Declare(fftw
     DOWNLOAD_EXTRACT_TIMESTAMP FALSE
 )
 FetchContent_MakeAvailable(fftw)
+
+if(APPLE AND DTBLKFX_BUILD_AUV2)
+    FetchContent_Declare(audiounitsdk
+        GIT_REPOSITORY "https://github.com/apple/AudioUnitSDK.git"
+        GIT_TAG "53a9a2008aae7fb1b0a9f093dd523b9b12f6c0d9"
+        GIT_SHALLOW FALSE
+    )
+    FetchContent_MakeAvailable(audiounitsdk)
+endif()
+
 add_subdirectory(third_party/vst3sdk EXCLUDE_FROM_ALL)
 set(public_sdk_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vst3sdk/public.sdk")
 
@@ -169,4 +181,112 @@ if(APPLE)
         PROPERTIES COMPILE_FLAGS "-fobjc-arc"
     )
     smtg_target_setup_universal_binary(dtblkfx_perf)
+
+    add_executable(dtblkfx_presets
+        tests/preset_tool.cpp
+        ${public_sdk_SOURCE_DIR}/source/common/memorystream.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/plugprovider.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/parameterchanges.cpp
+        ${public_sdk_SOURCE_DIR}/source/vst/vstpresetfile.cpp
+    )
+    target_compile_features(dtblkfx_presets PRIVATE cxx_std_17)
+    target_include_directories(dtblkfx_presets PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(dtblkfx_presets PRIVATE sdk_hosting "-framework Cocoa")
+    set_target_properties(dtblkfx_presets PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
+    set_source_files_properties(
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+    )
+    smtg_target_setup_universal_binary(dtblkfx_presets)
+endif()
+
+if(APPLE AND DTBLKFX_BUILD_AUV2)
+    file(READ
+        "${public_sdk_SOURCE_DIR}/source/vst/auwrapper/auwrapper.mm"
+        DTBLKFX_AUWRAPPER_ORIGINAL
+    )
+    string(REPLACE
+        "(float)numPresets;"
+        "(float)(numPresets - 1);"
+        DTBLKFX_AUWRAPPER_SOURCE
+        "${DTBLKFX_AUWRAPPER_ORIGINAL}"
+    )
+    if(DTBLKFX_AUWRAPPER_SOURCE STREQUAL DTBLKFX_AUWRAPPER_ORIGINAL)
+        message(FATAL_ERROR "The pinned AU wrapper program-list patch no longer applies")
+    endif()
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+    file(WRITE
+        "${CMAKE_BINARY_DIR}/generated/dtblkfx_auwrapper.mm"
+        "${DTBLKFX_AUWRAPPER_SOURCE}"
+    )
+
+    file(GLOB AUDIOUNIT_SDK_SOURCES CONFIGURE_DEPENDS
+        "${audiounitsdk_SOURCE_DIR}/src/AudioUnitSDK/*.cpp"
+    )
+    add_library(dtblkfx_audiounitsdk STATIC ${AUDIOUNIT_SDK_SOURCES})
+    target_compile_features(dtblkfx_audiounitsdk PUBLIC cxx_std_17)
+    target_include_directories(dtblkfx_audiounitsdk PUBLIC
+        "${audiounitsdk_SOURCE_DIR}/include"
+    )
+    target_link_libraries(dtblkfx_audiounitsdk PUBLIC
+        "-framework AudioToolbox"
+        "-framework CoreAudio"
+        "-framework CoreFoundation"
+    )
+
+    add_library(DtBlkFxAU MODULE
+        ${public_sdk_SOURCE_DIR}/source/vst/auwrapper/aucocoaview.mm
+        ${CMAKE_BINARY_DIR}/generated/dtblkfx_auwrapper.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/auwrapper/NSDataIBStream.mm
+    )
+    target_compile_features(DtBlkFxAU PRIVATE cxx_std_17)
+    target_compile_definitions(DtBlkFxAU PRIVATE
+        SMTG_AUWRAPPER_USES_AUSDK
+        SMTG_AUCocoaUIBase_CLASS_NAME=DtBlkFxAUCocoaUIBase
+        CA_USE_AUDIO_PLUGIN_ONLY=0
+    )
+    target_include_directories(DtBlkFxAU PRIVATE
+        "${audiounitsdk_SOURCE_DIR}/include"
+        "${public_sdk_SOURCE_DIR}/source/vst/auwrapper"
+    )
+    target_link_libraries(DtBlkFxAU PRIVATE
+        sdk_hosting
+        dtblkfx_audiounitsdk
+        "-framework AudioUnit"
+        "-framework CoreMIDI"
+        "-framework AudioToolbox"
+        "-framework CoreFoundation"
+        "-framework Carbon"
+        "-framework Cocoa"
+        "-framework CoreAudio"
+    )
+    add_dependencies(DtBlkFxAU DtBlkFx)
+    set_target_properties(DtBlkFxAU PROPERTIES
+        BUNDLE TRUE
+        BUNDLE_EXTENSION component
+        OUTPUT_NAME DtBlkFx
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/AU/Release"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/au/Info.plist.in"
+    )
+    smtg_target_setup_universal_binary(DtBlkFxAU)
+    add_custom_command(TARGET DtBlkFxAU POST_BUILD
+        COMMAND /usr/bin/ditto
+            "$<TARGET_BUNDLE_DIR:DtBlkFx>"
+            "$<TARGET_BUNDLE_DIR:DtBlkFxAU>/Contents/Resources/plugin.vst3"
+        COMMAND /usr/bin/codesign --force --sign - --deep "$<TARGET_BUNDLE_DIR:DtBlkFxAU>"
+        VERBATIM
+    )
+
+    add_executable(dtblkfx_au_presets tests/au_preset_tool.mm)
+    target_compile_features(dtblkfx_au_presets PRIVATE cxx_std_17)
+    target_link_libraries(dtblkfx_au_presets PRIVATE
+        "-framework AudioToolbox"
+        "-framework CoreFoundation"
+    )
+    set_target_properties(dtblkfx_au_presets PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
 endif()

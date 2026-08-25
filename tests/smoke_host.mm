@@ -107,24 +107,13 @@ int main(int argc, const char* argv[])
 
         Steinberg::ViewRect size;
         if(!Check(view->getSize(&size) == Steinberg::kResultTrue, "editor size unavailable") ||
-           !Check(size.getWidth() == 410 && size.getHeight() == 439, "unexpected editor dimensions"))
+           !Check(size.getWidth() == 410 && size.getHeight() == 409, "unexpected editor dimensions"))
             return 1;
 
         NSView* parent = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, size.getWidth(), size.getHeight())];
         if(!Check(view->attached((__bridge void*)parent, Steinberg::kPlatformTypeNSView) == Steinberg::kResultTrue,
                   "editor attach failed") ||
            !Check(parent.subviews.count == 1, "editor did not attach one native child view"))
-            return 1;
-
-        NSPopUpButton* presetPopup = nil;
-        for(NSView* subview in parent.subviews.firstObject.subviews)
-        {
-            if([subview isKindOfClass:NSPopUpButton.class])
-                presetPopup = static_cast<NSPopUpButton*>(subview);
-        }
-        if(!Check(presetPopup != nil, "editor has no factory-preset selector") ||
-           !Check(presetPopup.numberOfItems == 43, "editor preset selector is incomplete") ||
-           !Check(presetPopup.indexOfSelectedItem == 2, "editor preset selector is out of sync"))
             return 1;
 
         NSData* before = Render(parent);
@@ -359,7 +348,7 @@ int main(int argc, const char* argv[])
             return 1;
 
         Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
-        std::cout << "PASS: module, preset selector, ordered startup, state, audio, live FFT, bypass continuity, disable/re-enable, NSView lifecycle\n";
+        std::cout << "PASS: module, programs, ordered startup, state, audio, live FFT, bypass continuity, disable/re-enable, NSView lifecycle\n";
         return 0;
     }
 }

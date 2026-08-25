@@ -6,6 +6,7 @@
 
 # CMake
 /build/
+/build-au/
 /cmake-build-*/
 CMakeCache.txt
 CMakeFiles/

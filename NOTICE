@@ -14,3 +14,6 @@ the MIT License included in third_party/vst3sdk/LICENSE.txt.
 FFTW 3.3.10 is copyright Matteo Frigo and the Massachusetts Institute of
 Technology and is used under GNU GPL version 2 or any later version. Its
 official source archive is fetched by CMake with a pinned SHA-256 digest.
+
+The optional AUv2 build uses Apple's AudioUnitSDK under the Apache License 2.0.
+Its official source is fetched at a pinned Git commit by CMake.

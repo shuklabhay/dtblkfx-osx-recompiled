@@ -29,10 +29,9 @@ available, Intel mode.
 The VST3 exposes the original 44 normalized parameters, all 43 named factory
 presets through the VST3 program-list API, and the standard VST3 bypass
 parameter. Its native AppKit editor preserves the original 410 by 409 pixel
-artwork and control layout, adds a 30-pixel factory-preset selector, supports
-parameter editing and effect menus, and renders the preserved engine's live
-input and output FFT data through VST3's real-time data exchange API. No JUCE or
-VSTGUI binary dependency is used.
+artwork and control layout, supports parameter editing and effect menus, and
+renders the preserved engine's live input and output FFT data through VST3's
+real-time data exchange API. No JUCE or VSTGUI binary dependency is used.
 
 Run the complete verification loop independently with:
 
@@ -41,7 +40,7 @@ Run the complete verification loop independently with:
 ```
 
 The smoke host loads the module, verifies and selects the historical program
-bank and visible selector, verifies host-independent startup ordering,
+bank, verifies host-independent startup ordering,
 round-trips controller and component state, attaches and renders the NSView
 editor, edits a parameter, processes deterministic stereo audio, proves that a
 long-delay impulse cannot leak out after bypass, verifies that live FFT data
@@ -55,6 +54,39 @@ FFT sizes, five overlaps, four delays, and a large-FFT/long-delay case. Set
 `DTBLKFX_PERF_OUTPUT_DIR` to write interleaved stereo float32 output for sample
 comparison. Generated reports and audio stay under the ignored
 `tmp_dtblk-osx-recompiled` directory.
+
+## Preset packs
+
+Generate and validate the standard VST3 and Ableton Live preset archives with:
+
+```sh
+./scripts/package_presets.sh
+```
+
+The generator selects each of the 43 programs in the built VST3, saves it with
+Steinberg's preset API, reloads it through the plug-in, and verifies the full
+parameter state. It then creates deterministic ZIP archives under
+`preset-packs`. No files are copied into user or system preset directories.
+
+## Audio Unit v2
+
+Build the universal AUv2 wrapper with:
+
+```sh
+./scripts/build_auv2.sh
+```
+
+The result is `build-au/AU/Release/DtBlkFx.component`. This optional target
+fetches Apple's AudioUnitSDK at pinned commit
+`53a9a2008aae7fb1b0a9f093dd523b9b12f6c0d9` into the ignored `build-au`
+directory and uses Steinberg's official VST3-to-AUv2 wrapper. The component
+embeds the same universal VST3 and exposes all 43 programs as AU factory
+presets. It does not require JUCE or a full Xcode installation.
+
+Apple's validator only discovers installed Audio Units. To validate without
+leaving the component installed, copy it temporarily into
+`~/Library/Audio/Plug-Ins/Components`, restart `AudioComponentRegistrar`, run
+`auval -v aufx DtBF DtFx`, and move it back out afterward.
 
 ## Historical binary oracle
 

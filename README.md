@@ -5,15 +5,16 @@ It preserves the original FFT effect engine, parameters, factory presets, art,
 and state format behind a small native VST3/AppKit boundary. It does not use
 JUCE.
 
-The current bundle runs natively on Apple Silicon and Intel Macs, exposes the
-original 44 controls and 43 factory presets, includes a visible factory-preset
-selector, displays live input/output spectrograms, supports artifact-free host
-bypass and state recall, and defaults new instances to zero user delay. The FFT
-still has the algorithmic look-ahead inherent to block processing.
+The current VST3 and AUv2 bundles run natively on Apple Silicon and Intel Macs,
+expose the original 44 controls and 43 factory presets, display live
+input/output spectrograms, support artifact-free host bypass and state recall,
+and default new instances to zero user delay. The FFT still has the algorithmic
+look-ahead inherent to block processing.
 
 Ableton Live does not show VST3 program lists in its device-level preset field.
-Open the DtBlkFx window with Live's wrench button and use the `Preset` selector
-at the bottom of the editor.
+The repository therefore ships both standard `.vstpreset` files and a separate
+Ableton `.adv` pack under [`preset-packs`](preset-packs/README.md). Neither pack
+is installed by the build.
 
 ## Status
 
@@ -37,6 +38,16 @@ This produces `build/VST3/Release/DtBlkFx.vst3` and runs the complete validator
 and smoke loop in both arm64 and x86_64 modes when Rosetta is available. Build
 dependencies stay under the ignored `build` directory. See
 [the build guide](docs/BUILDING.md) for details.
+
+Build the universal AUv2 wrapper separately with:
+
+```sh
+./scripts/build_auv2.sh
+```
+
+This produces `build-au/AU/Release/DtBlkFx.component`. It uses Steinberg's
+official AUv2 wrapper and Apple's AudioUnitSDK around the same VST3 module; it
+does not duplicate or rewrite the DSP.
 
 For local installation:
 

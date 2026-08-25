@@ -96,9 +96,9 @@ The 44 normalized parameter mappings, eight-stage order, 31 effect indices,
 factory preset data, legacy chunk state, stereo processing, artwork, and manual
 control behavior are preserved. The VST3 adds a standard bypass parameter, a
 native AppKit editor with live input/output spectrograms, VST3 factory-program
-discovery, an in-editor factory-preset selector, artifact-free bypass state
-advancement, deterministic startup parameter ordering, and correct
-disable/re-enable lifecycle handling.
+discovery, standard VST3 and Ableton preset packs, an AUv2 wrapper with native
+factory presets, artifact-free bypass state advancement, deterministic startup
+parameter ordering, and correct disable/re-enable lifecycle handling.
 
 A new instance intentionally defaults Delay to zero at the user's request. The
 original one-beat value remains selectable and remains in historical presets.
@@ -119,6 +119,13 @@ passes module loading, all 43 program names and program application, state
 round-trip, deterministic audio, live FFT display, bypass lifecycle,
 disable/re-enable, and AppKit attachment. The same bundle has loaded and run in
 Ableton Live 11.3.43.
+
+The universal AUv2 wrapper passes Apple's `auval` open, property, factory
+preset, parameter, stereo format, connection, and render tests. Render coverage
+includes buffer sizes from 64 to 4096 frames and sample rates from 11.025 to
+192 kHz. A separate host instantiates the AU and selects all 43 factory presets
+on both arm64 and x86_64, confirming that AU program indices map to the exact
+VST3 program states.
 
 This is enough for a source release or clearly labeled beta. A polished binary
 release still needs a unique continuation version/maintainer identity, Developer
