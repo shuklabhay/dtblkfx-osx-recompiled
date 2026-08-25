@@ -10,11 +10,12 @@ that contains the complete DtBlkFx plug-in source. The tag
 `upstream-source-complete` names that boundary. The later upstream tip is
 retained on tag `upstream-dozius-final` for comparison.
 
-The original `dtblkfx`, `resources`, documentation, VSTGUI, and Windows binary
-reference material remain in their historical paths. Files under `port` and
-`vst3` are the new host-compatibility and VST3 boundaries. Changes inside
-`dtblkfx` are limited to platform-width fixes, current C++ name lookup, macOS
-synchronization primitives, include filename case, compile guards that replace
+The original DtBlkFx source, resources, VSTGUI, and Windows project material are
+grouped under `upstream` without changing their contents. Files under
+`src/compat` and `src/vst3` are the new host-compatibility and VST3 boundaries.
+Changes inside `upstream/dtblkfx` are limited to platform-width fixes, current
+C++ name lookup, macOS synchronization primitives, include filename case,
+compile guards that replace
 the VST2 host base when building the native VST3, and a headless observation
 callback that copies the already-computed pre/post-effect FFT display data. The
 effect algorithms, parameter normalization, block processing, preset data, and

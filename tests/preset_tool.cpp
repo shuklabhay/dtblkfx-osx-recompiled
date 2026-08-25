@@ -1,5 +1,5 @@
 // Generates and reload-validates factory presets through the VST3 host API.
-#include "vst3/ids.hpp"
+#include "src/vst3/ids.hpp"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivstcomponent.h"

@@ -2,7 +2,7 @@
 .DS_Store
 
 # Local scratch files
-/tmp_dtblk-osx-recompiled/
+/tmp_dtblkfx-osx-recompiled/
 
 # CMake
 /build/

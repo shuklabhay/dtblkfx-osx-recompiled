@@ -26,7 +26,7 @@ Requirements are macOS 11 or newer, Xcode Command Line Tools, Git, and CMake
 3.25 or newer.
 
 ```sh
-./scripts/build.sh
+./tools/build.sh
 ```
 
 This produces `build/VST3/Release/DtBlkFx.vst3` and runs the complete validator
@@ -37,7 +37,7 @@ dependencies stay under the ignored `build` directory. See
 Build the universal AUv2 wrapper separately with:
 
 ```sh
-./scripts/build_auv2.sh
+./tools/build_auv2.sh
 ```
 
 This produces `build-au/AU/Release/DtBlkFx.component`. It uses Steinberg's

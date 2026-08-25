@@ -1,13 +1,13 @@
 // Publishes the original 44-parameter model through the VST3 controller API.
-#include "port/StdAfx.h"
+#include "src/compat/StdAfx.h"
 
 #include "controller.hpp"
 
 #include "editor.hpp"
 #include "ids.hpp"
 #include "state.hpp"
-#include "dtblkfx/BlkFxParam.h"
-#include "port/legacy_runtime.hpp"
+#include "upstream/dtblkfx/BlkFxParam.h"
+#include "src/compat/legacy_runtime.hpp"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/base/ustring.h"

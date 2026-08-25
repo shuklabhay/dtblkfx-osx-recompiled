@@ -3,8 +3,8 @@
 
 #include "ids.hpp"
 #include "state.hpp"
-#include "dtblkfx/DtBlkFx.hpp"
-#include "port/legacy_runtime.hpp"
+#include "upstream/dtblkfx/DtBlkFx.hpp"
+#include "src/compat/legacy_runtime.hpp"
 
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
