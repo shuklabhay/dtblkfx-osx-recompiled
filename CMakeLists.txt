@@ -273,9 +273,12 @@ if(APPLE AND DTBLKFX_BUILD_AUV2)
     )
     smtg_target_setup_universal_binary(DtBlkFxAU)
     add_custom_command(TARGET DtBlkFxAU POST_BUILD
-        COMMAND /usr/bin/ditto
+        COMMAND /usr/bin/ditto --norsrc
             "$<TARGET_BUNDLE_DIR:DtBlkFx>"
             "$<TARGET_BUNDLE_DIR:DtBlkFxAU>/Contents/Resources/plugin.vst3"
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${CMAKE_CURRENT_SOURCE_DIR}/vst3/DtBlkFx.icns"
+            "$<TARGET_BUNDLE_DIR:DtBlkFxAU>/Contents/Resources/DtBlkFx.icns"
         COMMAND /usr/bin/codesign --force --sign - --deep "$<TARGET_BUNDLE_DIR:DtBlkFxAU>"
         VERBATIM
     )

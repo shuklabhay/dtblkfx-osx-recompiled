@@ -6,6 +6,8 @@
     <string>English</string>
     <key>CFBundleExecutable</key>
     <string>DtBlkFx</string>
+    <key>CFBundleIconFile</key>
+    <string>DtBlkFx.icns</string>
     <key>CFBundleIdentifier</key>
     <string>org.darrelltam.dtblkfx.au</string>
     <key>CFBundleInfoDictionaryVersion</key>
