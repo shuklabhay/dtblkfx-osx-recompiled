@@ -17,6 +17,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -110,6 +112,15 @@ std::vector<Scenario> MakeScenarios()
         Scenario scenario = BaseScenario("chain-" + std::to_string(chain));
         for(int set = 0; set < EffectSetCount; ++set)
             SetEffect(scenario, set, (chain * 5 + set * 3) % 31, 0.13 + 0.1 * set);
+        scenarios.push_back(std::move(scenario));
+    }
+
+    constexpr std::array<int, EffectSetCount> chainFourEffects {20, 23, 26, 29, 1, 4, 7, 10};
+    for(int prefix = 1; prefix <= EffectSetCount; ++prefix)
+    {
+        Scenario scenario = BaseScenario("chain-4-prefix-" + std::to_string(prefix));
+        for(int set = 0; set < prefix; ++set)
+            SetEffect(scenario, set, chainFourEffects[set], 0.13 + 0.1 * set);
         scenarios.push_back(std::move(scenario));
     }
 
@@ -276,6 +287,15 @@ public:
         std::uint64_t hash = 1469598103934665603ULL;
         std::int64_t firstOutput = -1;
         std::vector<double> blockMicroseconds;
+        std::ofstream output;
+        if(const char* directory = std::getenv("DTBLKFX_PERF_OUTPUT_DIR"))
+        {
+            std::filesystem::create_directories(directory);
+            output.open(std::filesystem::path(directory) / (scenario.name + ".f32"),
+                        std::ios::binary | std::ios::trunc);
+            if(!output)
+                return false;
+        }
         std::uint64_t position = 0;
         while(position < static_cast<std::uint64_t>(scenario.renderSamples))
         {
@@ -300,6 +320,11 @@ public:
             {
                 hash = HashSample(hash, outputLeft[sample]);
                 hash = HashSample(hash, outputRight[sample]);
+                if(output)
+                {
+                    const float pair[] {outputLeft[sample], outputRight[sample]};
+                    output.write(reinterpret_cast<const char*>(pair), sizeof(pair));
+                }
                 if(firstOutput < 0 && (outputLeft[sample] != 0.0f || outputRight[sample] != 0.0f))
                     firstOutput = static_cast<std::int64_t>(position + sample);
             }

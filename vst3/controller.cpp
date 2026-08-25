@@ -7,12 +7,14 @@
 #include "ids.hpp"
 #include "state.hpp"
 #include "dtblkfx/BlkFxParam.h"
+#include "port/legacy_runtime.hpp"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/base/ustring.h"
 
 #include <array>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -50,9 +52,11 @@ Steinberg::FUnknown* Controller::createInstance(void*)
 
 Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* context)
 {
-    const Steinberg::tresult result = EditController::initialize(context);
+    const Steinberg::tresult result = EditControllerEx1::initialize(context);
     if(result != Steinberg::kResultOk)
         return result;
+    if(!InitializeLegacyRuntime())
+        return Steinberg::kResultFalse;
 
     for(Steinberg::Vst::ParamID id = 0; id < LegacyParameterCount; ++id)
     {
@@ -67,6 +71,23 @@ Steinberg::tresult PLUGIN_API Controller::initialize(Steinberg::FUnknown* contex
                             Steinberg::Vst::ParameterInfo::kCanAutomate |
                                 Steinberg::Vst::ParameterInfo::kIsBypass,
                             BypassParameterId);
+
+    addUnit(new Steinberg::Vst::Unit(STR16("Root"), Steinberg::Vst::kRootUnitId,
+                                    Steinberg::Vst::kNoParentUnitId, FactoryProgramListId));
+    auto* programList = new Steinberg::Vst::ProgramList(STR16("Factory Presets"),
+                                                        FactoryProgramListId,
+                                                        Steinberg::Vst::kRootUnitId);
+    addProgramList(programList);
+    for(std::size_t index = 0; index < LegacyPresetCount(); ++index)
+    {
+        Steinberg::Vst::String128 name {};
+        Steinberg::UString(name, 128).fromAscii(LegacyPresetName(index));
+        programList->addProgram(name);
+    }
+    Steinberg::Vst::Parameter* programParameter = programList->getParameter();
+    programParameter->getInfo().id = ProgramParameterId;
+    programParameter->getInfo().flags &= ~Steinberg::Vst::ParameterInfo::kCanAutomate;
+    parameters.addParameter(programParameter);
     return Steinberg::kResultOk;
 }
 
@@ -74,12 +95,19 @@ Steinberg::tresult PLUGIN_API Controller::setComponentState(Steinberg::IBStream*
 {
     StateData state;
     std::array<float, 44> parameterValues {};
+    Steinberg::int32 program {};
     if(!ReadState(stream, state) || !ExtractLegacyParameters(state.legacyChunk, parameterValues))
         return Steinberg::kResultFalse;
 
     for(Steinberg::Vst::ParamID id = 0; id < LegacyParameterCount; ++id)
         setParamNormalized(id, parameterValues[id]);
     setParamNormalized(BypassParameterId, state.bypass ? 1.0 : 0.0);
+    if(ExtractLegacyProgram(state.legacyChunk, program) && LegacyPresetCount() > 1)
+        EditControllerEx1::setParamNormalized(
+            ProgramParameterId,
+            static_cast<double>(std::clamp<Steinberg::int32>(
+                program, 0, static_cast<Steinberg::int32>(LegacyPresetCount() - 1))) /
+                static_cast<double>(LegacyPresetCount() - 1));
     return Steinberg::kResultOk;
 }
 
@@ -103,9 +131,11 @@ Steinberg::tresult PLUGIN_API Controller::setState(Steinberg::IBStream* stream)
         if(!reader.readDouble(value))
             return Steinberg::kResultFalse;
         const Steinberg::Vst::ParameterInfo info = parameters.getParameterByIndex(index)->getInfo();
-        if(setParamNormalized(info.id, value) != Steinberg::kResultOk)
+        if(EditControllerEx1::setParamNormalized(info.id, value) != Steinberg::kResultOk)
             return Steinberg::kResultFalse;
     }
+    for(EditorView* editor : editors)
+        editor->invalidate();
     return Steinberg::kResultOk;
 }
 
@@ -133,7 +163,7 @@ Steinberg::tresult PLUGIN_API Controller::notify(Steinberg::Vst::IMessage* messa
 {
     if(spectrumReceiver.onMessage(message))
         return Steinberg::kResultTrue;
-    return EditController::notify(message);
+    return EditControllerEx1::notify(message);
 }
 
 void PLUGIN_API Controller::queueOpened(Steinberg::Vst::DataExchangeUserContextID,
@@ -168,9 +198,23 @@ void PLUGIN_API Controller::onDataExchangeBlocksReceived(
 Steinberg::tresult PLUGIN_API Controller::setParamNormalized(Steinberg::Vst::ParamID id,
                                                               Steinberg::Vst::ParamValue value)
 {
-    const Steinberg::tresult result = EditController::setParamNormalized(id, value);
+    const Steinberg::tresult result = EditControllerEx1::setParamNormalized(id, value);
     if(result == Steinberg::kResultOk)
     {
+        if(id == ProgramParameterId && LegacyPresetCount() > 0)
+        {
+            const std::size_t index = static_cast<std::size_t>(std::lround(
+                std::clamp(value, 0.0, 1.0) * static_cast<double>(LegacyPresetCount() - 1)));
+            std::array<float, 44> preset {};
+            if(ReadLegacyPreset(index, preset))
+            {
+                for(Steinberg::Vst::ParamID parameter = 0; parameter < LegacyParameterCount;
+                    ++parameter)
+                    EditControllerEx1::setParamNormalized(parameter, preset[parameter]);
+                if(componentHandler)
+                    componentHandler->restartComponent(Steinberg::Vst::kParamValuesChanged);
+            }
+        }
         for(EditorView* editor : editors)
             editor->invalidate();
     }

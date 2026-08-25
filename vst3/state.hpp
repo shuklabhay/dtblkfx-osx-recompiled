@@ -18,4 +18,5 @@ struct StateData
 bool ReadState(Steinberg::IBStream* stream, StateData& state);
 bool WriteState(Steinberg::IBStream* stream, const StateData& state);
 bool ExtractLegacyParameters(const std::vector<std::uint8_t>& chunk, std::array<float, 44>& parameters);
+bool ExtractLegacyProgram(const std::vector<std::uint8_t>& chunk, Steinberg::int32& program);
 }

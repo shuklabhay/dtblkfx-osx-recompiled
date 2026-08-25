@@ -332,7 +332,7 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
             if(!queue)
                 continue;
             const Steinberg::Vst::ParamID id = queue->getParameterId();
-            if(id >= LegacyParameterCount && id != BypassParameterId)
+            if(id >= LegacyParameterCount && id != BypassParameterId && id != ProgramParameterId)
                 continue;
             for(Steinberg::int32 pointIndex = 0; pointIndex < queue->getPointCount(); ++pointIndex)
             {
@@ -365,6 +365,9 @@ Steinberg::tresult PLUGIN_API Processor::process(Steinberg::Vst::ProcessData& da
             const ParameterEvent& event = parameterEvents[eventIndex++];
             if(event.id == BypassParameterId)
                 bypass = event.value > 0.5;
+            else if(event.id == ProgramParameterId && LegacyPresetCount() > 0)
+                engine->setProgram(static_cast<VstInt32>(std::lround(
+                    event.value * static_cast<double>(LegacyPresetCount() - 1))));
             else
                 engine->setParameter(static_cast<VstInt32>(event.id), static_cast<float>(event.value));
         }

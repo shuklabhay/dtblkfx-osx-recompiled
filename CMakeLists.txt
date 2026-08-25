@@ -68,7 +68,6 @@ set(DTBLKFX_ENGINE_SOURCES
 add_library(dtblkfx_engine STATIC ${DTBLKFX_ENGINE_SOURCES})
 target_compile_features(dtblkfx_engine PUBLIC cxx_std_17)
 target_compile_definitions(dtblkfx_engine PUBLIC DTBLKFX_HEADLESS=1 STEREO=1)
-target_compile_options(dtblkfx_engine PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 target_include_directories(dtblkfx_engine
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/dtblkfx
@@ -138,8 +137,10 @@ if(APPLE)
         ${public_sdk_SOURCE_DIR}/source/common/memorystream.cpp
         ${public_sdk_SOURCE_DIR}/source/vst/hosting/plugprovider.cpp
         ${public_sdk_SOURCE_DIR}/source/vst/hosting/module_mac.mm
+        ${public_sdk_SOURCE_DIR}/source/vst/hosting/parameterchanges.cpp
     )
     target_compile_features(dtblkfx_smoke PRIVATE cxx_std_17)
+    target_include_directories(dtblkfx_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(dtblkfx_smoke PRIVATE sdk_hosting "-framework Cocoa")
     set_target_properties(dtblkfx_smoke PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"

@@ -9,6 +9,7 @@
 
 #include <dlfcn.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -66,4 +67,25 @@ bool InitializeLegacyRuntime()
         return false;
     }
     return initialized;
+}
+
+std::size_t LegacyPresetCount()
+{
+    return g_blk_fx_presets.size();
+}
+
+const char* LegacyPresetName(std::size_t index)
+{
+    if(index >= g_blk_fx_presets.size())
+        return nullptr;
+    return g_blk_fx_presets[index].getName();
+}
+
+bool ReadLegacyPreset(std::size_t index, std::array<float, 44>& parameters)
+{
+    if(index >= g_blk_fx_presets.size())
+        return false;
+    std::copy(g_blk_fx_presets[index].params.begin(), g_blk_fx_presets[index].params.end(),
+              parameters.begin());
+    return true;
 }

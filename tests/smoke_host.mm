@@ -1,13 +1,17 @@
 // Loads, attaches, renders, edits, and removes the DtBlkFx editor through VST3 host APIs.
 #import <Cocoa/Cocoa.h>
 
+#include "vst3/ids.hpp"
+
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
+#include "pluginterfaces/vst/ivstunits.h"
 #include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
 #include "public.sdk/source/vst/hosting/module.h"
+#include "public.sdk/source/vst/hosting/parameterchanges.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
 
 #include <cmath>
@@ -73,8 +77,25 @@ int main(int argc, const char* argv[])
 
         auto controller = provider->getControllerPtr();
         if(!Check(controller != nullptr, "edit controller not found") ||
-           !Check(controller->getParameterCount() == 45, "expected 44 legacy parameters plus bypass") ||
+           !Check(controller->getParameterCount() == 46,
+                  "expected 44 legacy parameters, bypass, and factory programs") ||
            !Check(controller->getParamNormalized(1) == 0.0, "fresh instances must default Delay to zero"))
+            return 1;
+
+        auto unitInfo = Steinberg::U::cast<Steinberg::Vst::IUnitInfo>(controller);
+        Steinberg::Vst::ProgramListInfo programListInfo {};
+        Steinberg::Vst::String128 lastProgramName {};
+        if(!Check(unitInfo != nullptr, "controller does not expose VST3 program lists") ||
+           !Check(unitInfo->getProgramListCount() == 1, "expected one factory program list") ||
+           !Check(unitInfo->getProgramListInfo(0, programListInfo) == Steinberg::kResultTrue,
+                  "factory program list info unavailable") ||
+           !Check(programListInfo.programCount == 43, "expected all 43 historical factory presets") ||
+           !Check(unitInfo->getProgramName(programListInfo.id, 42, lastProgramName) == Steinberg::kResultTrue,
+                  "factory program name unavailable") ||
+           !Check(controller->setParamNormalized(DtBlkVst3::ProgramParameterId, 2.0 / 42.0) == Steinberg::kResultOk,
+                  "factory program selection failed") ||
+           !Check(std::abs(controller->getParamNormalized(5) - 0.635) < 1e-6,
+                  "factory program did not update controller parameters"))
             return 1;
 
         auto view = Steinberg::owned(controller->createView(Steinberg::Vst::ViewType::kEditor));
@@ -209,6 +230,24 @@ int main(int argc, const char* argv[])
                NSData* secondSpectrum = Render(parent);
                if([firstSpectrum isEqualToData:secondSpectrum])
                    return false;
+               Steinberg::Vst::ParameterChanges programChange(1);
+               Steinberg::int32 queueIndex {};
+               Steinberg::int32 pointIndex {};
+               auto* programQueue = programChange.addParameterData(DtBlkVst3::ProgramParameterId, queueIndex);
+               if(!programQueue ||
+                  programQueue->addPoint(0, 2.0 / 42.0, pointIndex) != Steinberg::kResultTrue)
+                   return false;
+               data.inputParameterChanges = &programChange;
+               if(processor->process(data) != Steinberg::kResultOk)
+                   return false;
+               data.inputParameterChanges = nullptr;
+               Steinberg::MemoryStream componentState;
+               if(component->getState(&componentState) != Steinberg::kResultOk ||
+                  componentState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr) != Steinberg::kResultOk ||
+                  controller->setComponentState(&componentState) != Steinberg::kResultOk ||
+                  std::abs(controller->getParamNormalized(5) - 0.635) > 1e-6 ||
+                  std::abs(controller->getParamNormalized(DtBlkVst3::ProgramParameterId) - 2.0 / 42.0) > 1e-9)
+                   return false;
                if(const char* screenshotPath = std::getenv("DTBLKFX_SMOKE_PNG"))
                {
                    if(![secondSpectrum writeToFile:[NSString stringWithUTF8String:screenshotPath]
@@ -225,7 +264,7 @@ int main(int argc, const char* argv[])
             return 1;
 
         Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
-        std::cout << "PASS: module, controller, state, audio, live FFT, disable/re-enable, NSView lifecycle\n";
+        std::cout << "PASS: module, programs, controller state, audio, live FFT, disable/re-enable, NSView lifecycle\n";
         return 0;
     }
 }

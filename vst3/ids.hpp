@@ -8,6 +8,8 @@ namespace DtBlkVst3
 {
 constexpr Steinberg::Vst::ParamID LegacyParameterCount = 44;
 constexpr Steinberg::Vst::ParamID BypassParameterId = 0x10000;
+constexpr Steinberg::Vst::ParamID ProgramParameterId = 0x10001;
+constexpr Steinberg::Vst::ProgramListID FactoryProgramListId = 0x10001;
 
 static DECLARE_UID(ProcessorUID, 0xE1DF6409, 0xE6A53951, 0x24C3CDC5, 0x20B60CD0);
 static DECLARE_UID(ControllerUID, 0x9EDF743B, 0xF948D258, 0x4C517545, 0xD62AF358);

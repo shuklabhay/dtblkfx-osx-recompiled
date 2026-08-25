@@ -20,6 +20,14 @@ callback that copies the already-computed pre/post-effect FFT display data. The
 effect algorithms, parameter normalization, block processing, preset data, and
 effect order are preserved.
 
+One user-facing default intentionally differs: a fresh VST3 instance starts
+with the Delay parameter at zero instead of the historical one-beat default.
+This does not alter the Delay mapping or processing algorithm, and recalled
+legacy state retains its stored value. The VST3 wrapper also adds standard host
+bypass and exposes the 43 historical named presets through VST3's program-list
+API. The VST2-only `> reset current <` command is not presented as a factory
+preset.
+
 The native editor redraws the historical layout from the unmodified upstream
 PNG resources and derives its labels, effect menu, encoded controls, frequency
 mapping, power scaling, logarithmic spectrum range, and six-stop spectrum
@@ -41,3 +49,7 @@ Git tag alone does not contain them.
 DtBlkFx and FFTW are GPL-compatible. The repository remains GPLv3 and preserves
 the upstream authorship and notices. The VST3 SDK version used here is MIT
 licensed. See `LICENSE`, `NOTICE`, and the dependency license files for terms.
+
+Historical binaries used as independent audit oracles are not committed. Their
+download locations, hashes, static-analysis results, and black-box comparison
+results are recorded in `docs/COMPATIBILITY.md`.

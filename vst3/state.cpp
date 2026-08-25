@@ -71,4 +71,13 @@ bool ExtractLegacyParameters(const std::vector<std::uint8_t>& chunk, std::array<
     }
     return true;
 }
+
+bool ExtractLegacyProgram(const std::vector<std::uint8_t>& chunk, Steinberg::int32& program)
+{
+    if(chunk.size() < LegacyHeaderBytes || ReadLittleEndian32(chunk.data()) != LegacyChunkMagic ||
+       ReadLittleEndian32(chunk.data() + 4) != 101U)
+        return false;
+    program = static_cast<Steinberg::int32>(ReadLittleEndian32(chunk.data() + 12));
+    return true;
+}
 }

@@ -11,15 +11,15 @@ namespace DtBlkVst3
 {
 class EditorView;
 
-class Controller final : public Steinberg::Vst::EditController,
+class Controller final : public Steinberg::Vst::EditControllerEx1,
                          public Steinberg::Vst::IDataExchangeReceiver
 {
 public:
-    OBJ_METHODS(Controller, Steinberg::Vst::EditController)
+    OBJ_METHODS(Controller, Steinberg::Vst::EditControllerEx1)
     DEFINE_INTERFACES
         DEF_INTERFACE(Steinberg::Vst::IDataExchangeReceiver)
-    END_DEFINE_INTERFACES(Steinberg::Vst::EditController)
-    REFCOUNT_METHODS(Steinberg::Vst::EditController)
+    END_DEFINE_INTERFACES(Steinberg::Vst::EditControllerEx1)
+    REFCOUNT_METHODS(Steinberg::Vst::EditControllerEx1)
 
     static Steinberg::FUnknown* createInstance(void*);
 
